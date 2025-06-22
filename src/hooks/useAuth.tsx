@@ -38,22 +38,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+  
+const signUp = async (email: string, password: string, fullName: string) => {
+  const redirectUrl = `${window.location.origin}/`;
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName
-        }
+  const { data, error: signUpError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: redirectUrl,
+      data: {
+        full_name: fullName
       }
-    });
-    return { error };
-  };
+    }
+  });
+
+  if (signUpError || !data.user) return { error: signUpError };
+
+  // 🧠 Insert ke tabel 'profiles' secara manual
+  const { error: profileError } = await supabase.from('profiles').insert({
+    id: data.user.id,
+    full_name: fullName,
+    role: 'member', // atau 'admin' tergantung enum kamu
+  });
+
+  return { error: profileError };
+};
+
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
