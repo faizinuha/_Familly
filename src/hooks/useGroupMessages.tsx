@@ -55,7 +55,7 @@ export function useGroupMessages(groupId: string | null) {
         .from('group_messages')
         .select(`
           *,
-          sender:profiles(full_name)
+          profiles(full_name)
         `)
         .eq('group_id', groupId)
         .order('created_at', { ascending: true });
@@ -65,8 +65,8 @@ export function useGroupMessages(groupId: string | null) {
       // Map the data to match our type structure
       const mappedMessages = (data || []).map(message => ({
         ...message,
-        sender: message.sender ? { full_name: message.sender.full_name } : undefined
-      }));
+        sender: message.profiles ? { full_name: message.profiles.full_name } : undefined
+      })) as GroupMessage[];
       
       setMessages(mappedMessages);
     } catch (error) {
