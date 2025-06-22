@@ -1,53 +1,124 @@
 
-import { useState } from "react";
-import { Users, Home, MessageSquare, Settings, Monitor, Plus, Bell, Wifi, Smartphone } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Users, Home, MessageSquare, Settings, Monitor, Plus, Bell, Wifi, Smartphone, LogOut, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { useFamilyGroups } from "@/hooks/useFamilyGroups";
+import { useGroupMessages } from "@/hooks/useGroupMessages";
+import { useDeviceMonitoring } from "@/hooks/useDeviceMonitoring";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [newMessage, setNewMessage] = useState("");
+  
+  const { user, signOut } = useAuth();
+  const { profile, isHeadOfFamily } = useProfile();
+  const { groups, createGroup, joinGroup } = useFamilyGroups();
+  const { messages, sendMessage, sendSystemNotification } = useGroupMessages(selectedGroupId);
+  const { devices, activities } = useDeviceMonitoring();
+  const { toast } = useToast();
 
-  // Mock data untuk demo
-  const familyMembers = [
-    { 
-      name: "Riska", 
-      device: "Redmi 8A", 
-      wifi: "TYZ", 
-      activity: "Chrome (Instagram)", 
-      status: "online",
-      lastSeen: "Sekarang"
-    },
-    { 
-      name: "Ahmad", 
-      device: "Samsung A32", 
-      wifi: "TYZ", 
-      activity: "YouTube", 
-      status: "online",
-      lastSeen: "2 menit lalu"
-    },
-    { 
-      name: "Siti", 
-      device: "iPhone 12", 
-      wifi: "TYZ", 
-      activity: "WhatsApp", 
-      status: "offline",
-      lastSeen: "1 jam lalu"
+  // Auto-select first group
+  useEffect(() => {
+    if (groups.length > 0 && !selectedGroupId) {
+      setSelectedGroupId(groups[0].id);
     }
-  ];
+  }, [groups, selectedGroupId]);
 
-  const notifications = [
-    { type: "activity", message: "Riska sedang menggunakan Instagram", time: "Baru saja" },
-    { type: "join", message: "Ahmad bergabung ke grup keluarga", time: "5 menit lalu" },
-    { type: "alert", message: "Siti tidak aktif selama 1 jam", time: "1 jam lalu" }
-  ];
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return;
+    
+    try {
+      const group = await createGroup(newGroupName);
+      if (group) {
+        toast({
+          title: "Berhasil!",
+          description: `Grup "${newGroupName}" berhasil dibuat`,
+        });
+        setNewGroupName("");
+        setSelectedGroupId(group.id);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal membuat grup",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleJoinGroup = async () => {
+    if (!inviteCode.trim()) return;
+    
+    try {
+      const group = await joinGroup(inviteCode);
+      if (group) {
+        toast({
+          title: "Berhasil!",
+          description: `Berhasil bergabung dengan grup "${group.name}"`,
+        });
+        setInviteCode("");
+        setSelectedGroupId(group.id);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Gagal bergabung ke grup",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
+    
+    try {
+      await sendMessage(newMessage);
+      setNewMessage("");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal mengirim pesan",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSendNotification = async (message: string) => {
+    try {
+      await sendSystemNotification(message);
+      toast({
+        title: "Notifikasi terkirim",
+        description: message,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal mengirim notifikasi",
+        variant: "destructive"
+      });
+    }
+  };
 
   const renderHome = () => (
     <div className="space-y-6">
       {/* Header Welcome */}
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6 rounded-lg">
         <h1 className="text-2xl font-bold mb-2">Selamat Datang di Good Family! 👨‍👩‍👧‍👦</h1>
-        <p className="opacity-90">Pantau dan jaga keluarga Anda dengan mudah</p>
+        <p className="opacity-90">Halo {profile?.full_name || user?.email}</p>
+        {isHeadOfFamily && (
+          <Badge className="mt-2 bg-yellow-500">Kepala Keluarga</Badge>
+        )}
       </div>
 
       {/* Quick Stats */}
@@ -55,36 +126,41 @@ const Index = () => {
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-            <div className="text-2xl font-bold">{familyMembers.length}</div>
-            <div className="text-sm text-gray-600">Anggota Keluarga</div>
+            <div className="text-2xl font-bold">{groups.length}</div>
+            <div className="text-sm text-gray-600">Grup Keluarga</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <Monitor className="h-8 w-8 text-green-500 mx-auto mb-2" />
-            <div className="text-2xl font-bold">{familyMembers.filter(m => m.status === 'online').length}</div>
-            <div className="text-sm text-gray-600">Sedang Online</div>
+            <div className="text-2xl font-bold">{devices.filter(d => d.status === 'online').length}</div>
+            <div className="text-sm text-gray-600">Device Online</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Notifications */}
+      {/* Recent Activities */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            Notifikasi Terbaru
+            Aktivitas Terbaru
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {notifications.map((notif, index) => (
+          {activities.slice(0, 5).map((activity, index) => (
             <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
               <div className="flex-1">
-                <p className="text-sm">{notif.message}</p>
-                <p className="text-xs text-gray-500">{notif.time}</p>
+                <p className="text-sm">{activity.user.full_name} menggunakan {activity.app_name}</p>
+                <p className="text-xs text-gray-500">
+                  {new Date(activity.timestamp).toLocaleString('id-ID')}
+                </p>
               </div>
             </div>
           ))}
+          {activities.length === 0 && (
+            <p className="text-sm text-gray-500 text-center">Belum ada aktivitas</p>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -94,146 +170,246 @@ const Index = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Grup Keluarga</h2>
-        <Button className="bg-blue-500 hover:bg-blue-600">
-          <Plus className="h-4 w-4 mr-2" />
-          Buat Grup Baru
-        </Button>
+        <div className="flex gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="sm" className="bg-blue-500 hover:bg-blue-600">
+                <Plus className="h-4 w-4 mr-1" />
+                Buat
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Buat Grup Baru</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="groupName">Nama Grup</Label>
+                  <Input
+                    id="groupName"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder="Keluarga Bahagia"
+                  />
+                </div>
+                <Button onClick={handleCreateGroup} className="w-full">
+                  Buat Grup
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline">
+                <UserPlus className="h-4 w-4 mr-1" />
+                Gabung
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Gabung ke Grup</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="inviteCode">Kode Undangan</Label>
+                  <Input
+                    id="inviteCode"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value)}
+                    placeholder="Masukkan kode undangan"
+                  />
+                </div>
+                <Button onClick={handleJoinGroup} className="w-full">
+                  Gabung
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      {/* Main Family Group */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Keluarga Utama
-            </div>
-            <Badge variant="secondary">Kepala Keluarga</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">Anggota Keluarga:</p>
-            {familyMembers.map((member, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${member.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                  <div>
-                    <p className="font-medium">{member.name}</p>
-                    <p className="text-xs text-gray-500">{member.lastSeen}</p>
-                  </div>
+      {/* Groups List */}
+      <div className="space-y-4">
+        {groups.map((group) => (
+          <Card key={group.id}>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  {group.name}
                 </div>
-                <Button variant="outline" size="sm">Monitor</Button>
+                {group.head_of_family_id === user?.id && (
+                  <Badge variant="secondary">Kepala Keluarga</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Kode Undangan:</span>
+                  <Badge variant="outline" className="font-mono">
+                    {group.invite_code}
+                  </Badge>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setSelectedGroupId(group.id)}
+                  className="w-full"
+                >
+                  Lihat Detail
+                </Button>
               </div>
-            ))}
+            </CardContent>
+          </Card>
+        ))}
+        {groups.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">Belum ada grup. Buat atau gabung ke grup untuk memulai!</p>
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
     </div>
   );
 
   const renderMonitoring = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Monitoring Keluarga</h2>
-        <Badge className="bg-orange-500">Kepala Keluarga</Badge>
+        <h2 className="text-xl font-bold">Monitoring Device</h2>
+        {isHeadOfFamily && (
+          <Badge className="bg-orange-500">Kepala Keluarga</Badge>
+        )}
       </div>
 
-      {/* Device Monitoring */}
+      {/* Device List */}
       <div className="space-y-4">
-        {familyMembers.map((member, index) => (
-          <Card key={index}>
+        {devices.map((device) => (
+          <Card key={device.id}>
             <CardHeader>
               <CardTitle className="flex items-center justify-between text-lg">
                 <div className="flex items-center gap-2">
                   <Smartphone className="h-5 w-5" />
-                  {member.name}
+                  {device.user.full_name}
                 </div>
-                <div className={`w-3 h-3 rounded-full ${member.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                <div className={`w-3 h-3 rounded-full ${device.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-600">Device:</p>
-                  <p className="font-medium">{member.device}</p>
+                  <p className="font-medium">{device.device_name}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">WiFi:</p>
                   <p className="font-medium flex items-center gap-1">
                     <Wifi className="h-4 w-4" />
-                    {member.wifi}
+                    {device.wifi_name || 'Unknown'}
                   </p>
                 </div>
               </div>
               <div>
-                <p className="text-gray-600 text-sm">Aktivitas Saat Ini:</p>
+                <p className="text-gray-600 text-sm">Aplikasi Saat Ini:</p>
                 <div className="flex items-center gap-2 mt-1">
                   <Badge variant="outline" className="text-blue-600">
-                    {member.activity}
+                    {device.current_app || 'Tidak diketahui'}
                   </Badge>
-                  {member.status === 'online' && (
+                  {device.status === 'online' && (
                     <Badge className="bg-green-500">Aktif</Badge>
                   )}
                 </div>
               </div>
               <div className="flex gap-2 mt-4">
-                <Button variant="outline" size="sm">
-                  <Bell className="h-4 w-4 mr-1" />
-                  Kirim Notifikasi
-                </Button>
-                <Button variant="outline" size="sm">Detail</Button>
+                {isHeadOfFamily && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleSendNotification(`${device.user.full_name}, mohon perhatikan penggunaan device!`)}
+                  >
+                    <Bell className="h-4 w-4 mr-1" />
+                    Kirim Notifikasi
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
         ))}
+        {devices.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">Belum ada device yang terpantau</p>
+          </div>
+        )}
       </div>
     </div>
   );
 
-  const renderChat = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Chat Keluarga</h2>
-        <Badge variant="secondary">3 Online</Badge>
-      </div>
+  const renderChat = () => {
+    const selectedGroup = groups.find(g => g.id === selectedGroupId);
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold">Chat Grup</h2>
+          {selectedGroup && (
+            <Badge variant="secondary">{selectedGroup.name}</Badge>
+          )}
+        </div>
 
-      <Card className="h-96">
-        <CardHeader>
-          <CardTitle className="text-lg">Grup Keluarga Utama</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col h-full">
-          <div className="flex-1 space-y-3 mb-4">
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="text-sm font-medium">Ahmad</p>
-              <p className="text-sm">Halo semua! Hari ini bagaimana?</p>
-              <p className="text-xs text-gray-500">10:30</p>
-            </div>
-            <div className="bg-green-50 p-3 rounded-lg ml-8">
-              <p className="text-sm font-medium">Saya</p>
-              <p className="text-sm">Alhamdulillah baik. @Riska sudah makan siang?</p>
-              <p className="text-xs text-gray-500">10:32</p>
-            </div>
-            <div className="bg-purple-50 p-3 rounded-lg">
-              <p className="text-sm font-medium">Riska</p>
-              <p className="text-sm">Sudah ayah! Terima kasih 😊</p>
-              <p className="text-xs text-gray-500">10:35</p>
-            </div>
+        {selectedGroup ? (
+          <Card className="h-96">
+            <CardHeader>
+              <CardTitle className="text-lg">{selectedGroup.name}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col h-full">
+              <div className="flex-1 space-y-3 mb-4 overflow-y-auto">
+                {messages.map((message) => (
+                  <div 
+                    key={message.id} 
+                    className={`p-3 rounded-lg ${
+                      message.is_system_notification 
+                        ? 'bg-yellow-50 border border-yellow-200' 
+                        : message.sender_id === user?.id 
+                          ? 'bg-blue-50 ml-8' 
+                          : 'bg-gray-50'
+                    }`}
+                  >
+                    <p className="text-sm font-medium">
+                      {message.is_system_notification ? '🔔 Sistem' : message.sender.full_name}
+                    </p>
+                    <p className="text-sm">{message.message}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(message.created_at).toLocaleString('id-ID')}
+                    </p>
+                  </div>
+                ))}
+                {messages.length === 0 && (
+                  <p className="text-sm text-gray-500 text-center">Belum ada pesan</p>
+                )}
+              </div>
+              <div className="border-t pt-3">
+                <div className="flex gap-2">
+                  <Input 
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Ketik pesan..." 
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  />
+                  <Button size="sm" onClick={handleSendMessage}>
+                    Kirim
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-gray-500">Pilih grup untuk mulai chat</p>
           </div>
-          <div className="border-t pt-3">
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                placeholder="Ketik pesan..." 
-                className="flex-1 border rounded-lg px-3 py-2 text-sm"
-              />
-              <Button size="sm">Kirim</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
 
   const renderSettings = () => (
     <div className="space-y-6">
@@ -246,33 +422,35 @@ const Index = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Nama</label>
-              <input type="text" defaultValue="Kepala Keluarga" className="w-full border rounded-lg px-3 py-2" />
+              <Label>Nama</Label>
+              <p className="text-sm font-medium">{profile?.full_name}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Role</label>
-              <Badge className="bg-blue-500">Kepala Keluarga</Badge>
+              <Label>Email</Label>
+              <p className="text-sm font-medium">{user?.email}</p>
+            </div>
+            <div>
+              <Label>Role</Label>
+              <Badge className={isHeadOfFamily ? "bg-blue-500" : "bg-gray-500"}>
+                {isHeadOfFamily ? "Kepala Keluarga" : "Anggota"}
+              </Badge>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Pengaturan Monitoring</CardTitle>
+            <CardTitle>Aksi</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Notifikasi Real-time</span>
-              <input type="checkbox" defaultChecked className="toggle" />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Monitoring Aktivitas</span>
-              <input type="checkbox" defaultChecked className="toggle" />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Alert Offline</span>
-              <input type="checkbox" defaultChecked className="toggle" />
-            </div>
+          <CardContent>
+            <Button 
+              variant="destructive"
+              onClick={signOut}
+              className="w-full"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Keluar
+            </Button>
           </CardContent>
         </Card>
       </div>
