@@ -1,8 +1,7 @@
-
-import { useState, useEffect } from 'react';
-import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { useEffect, useState } from 'react';
+import { useAuth } from './useAuth';
 
 type GroupMessage = Tables<'group_messages'> & {
   sender?: {
@@ -23,8 +22,7 @@ export function useGroupMessages(groupId: string | null) {
     }
 
     fetchMessages();
-    
-    // Set up real-time subscription
+
     const channel = supabase
       .channel(`group-messages-${groupId}`)
       .on(
@@ -33,11 +31,18 @@ export function useGroupMessages(groupId: string | null) {
           event: 'INSERT',
           schema: 'public',
           table: 'group_messages',
-          filter: `group_id=eq.${groupId}`
+          filter: `group_id=eq.${groupId}`,
         },
         (payload) => {
-          console.log('New message:', payload);
-          fetchMessages(); // Refresh messages when new one arrives
+          setMessages((prev) => [
+            ...prev,
+            {
+              ...(payload.new as GroupMessage),
+              sender: payload.new.sender
+                ? { full_name: payload.new.sender.full_name }
+                : undefined,
+            },
+          ]);
         }
       )
       .subscribe();
@@ -53,24 +58,23 @@ export function useGroupMessages(groupId: string | null) {
     try {
       const { data, error } = await supabase
         .from('group_messages')
-        .select(`
-          *,
-          profiles(full_name)
-        `)
+        .select('*') // Tidak pakai join ke profiles
         .eq('group_id', groupId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .throwOnError();
 
-      if (error) throw error;
-      
-      // Map the data to match our type structure
-      const mappedMessages = (data || []).map(message => ({
+      // Mapping nama pengirim: jika sender_id == user.id, pakai nama user, selain itu Unknown
+      const mappedMessages = (data || []).map((message) => ({
         ...message,
-        sender: message.profiles ? { full_name: message.profiles.full_name } : undefined
+        sender:
+          message.sender_id === user?.id
+            ? { full_name: user?.user_metadata?.full_name || 'Saya' }
+            : { full_name: 'Unknown' },
       })) as GroupMessage[];
-      
+
       setMessages(mappedMessages);
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      console.error('❌ Error fetching messages:', error);
     } finally {
       setLoading(false);
     }
@@ -80,19 +84,18 @@ export function useGroupMessages(groupId: string | null) {
     if (!user || !groupId || !message.trim()) return;
 
     try {
-      const { error } = await supabase
-        .from('group_messages')
-        .insert({
-          group_id: groupId,
-          sender_id: user.id,
-          message: message.trim(),
-          mentions
-        });
+      const { error } = await supabase.from('group_messages').insert({
+        group_id: groupId,
+        sender_id: user.id,
+        message: message.trim(),
+        mentions,
+      });
 
       if (error) throw error;
+      // Fetch ulang pesan setelah kirim
+      await fetchMessages();
     } catch (error) {
-      console.error('Error sending message:', error);
-      throw error;
+      console.error('❌ Error sending message:', error);
     }
   };
 
@@ -100,20 +103,17 @@ export function useGroupMessages(groupId: string | null) {
     if (!user || !groupId) return;
 
     try {
-      const { error } = await supabase
-        .from('group_messages')
-        .insert({
-          group_id: groupId,
-          sender_id: user.id,
-          message,
-          is_system_notification: true,
-          message_type: 'notification'
-        });
+      const { error } = await supabase.from('group_messages').insert({
+        group_id: groupId,
+        sender_id: user.id,
+        message,
+        is_system_notification: true,
+        message_type: 'notification',
+      });
 
       if (error) throw error;
     } catch (error) {
-      console.error('Error sending system notification:', error);
-      throw error;
+      console.error('❌ Error sending system notification:', error);
     }
   };
 
@@ -122,6 +122,6 @@ export function useGroupMessages(groupId: string | null) {
     loading,
     sendMessage,
     sendSystemNotification,
-    refreshMessages: fetchMessages
+    refreshMessages: fetchMessages,
   };
 }

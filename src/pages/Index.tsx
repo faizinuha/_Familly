@@ -12,6 +12,8 @@ import { useFamilyGroups } from "@/hooks/useFamilyGroups";
 import { useGroupMessages } from "@/hooks/useGroupMessages";
 import { useDeviceMonitoring } from "@/hooks/useDeviceMonitoring";
 import { useToast } from "@/hooks/use-toast";
+import ProfileSection from "@/components/ProfileSection";
+import { useGroupMembers } from "@/hooks/useGroupMembers";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -22,9 +24,10 @@ const Index = () => {
   
   const { user, signOut } = useAuth();
   const { profile, isHeadOfFamily } = useProfile();
-  const { groups, createGroup, joinGroup } = useFamilyGroups();
+  const { groups, createGroup, joinGroup, refreshGroups } = useFamilyGroups();
   const { messages, sendMessage, sendSystemNotification } = useGroupMessages(selectedGroupId);
   const { devices, activities } = useDeviceMonitoring();
+  const { members: groupMembers } = useGroupMembers(selectedGroupId);
   const { toast } = useToast();
 
   // Auto-select first group
@@ -69,10 +72,10 @@ const Index = () => {
         setInviteCode("");
         setSelectedGroupId(group.id);
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Gagal bergabung ke grup",
+        description: (error as Error).message || "Gagal bergabung ke grup",
         variant: "destructive"
       });
     }
@@ -106,6 +109,23 @@ const Index = () => {
         description: "Gagal mengirim notifikasi",
         variant: "destructive"
       });
+    }
+  };
+
+  // Tambah fungsi hapus grup
+  const handleDeleteGroup = async (groupId: string) => {
+    if (!window.confirm("Yakin ingin menghapus grup ini?")) return;
+    try {
+      // Hanya kepala keluarga yang bisa hapus
+      const { error } = await import("@/integrations/supabase/client").then(({ supabase }) =>
+        supabase.from("family_groups").delete().eq("id", groupId)
+      );
+      if (error) throw error;
+      toast({ title: "Grup dihapus", description: "Grup berhasil dihapus" });
+      refreshGroups();
+      setSelectedGroupId(null);
+    } catch (error) {
+      toast({ title: "Error", description: "Gagal menghapus grup", variant: "destructive" });
     }
   };
 
@@ -235,16 +255,38 @@ const Index = () => {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
+                  {/* Avatar grup: huruf pertama nama grup */}
+                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 text-blue-700 font-bold text-lg">
+                    {group.name[0]?.toUpperCase()}
+                  </div>
                   {group.name}
                 </div>
-                {group.head_of_family_id === user?.id && (
-                  <Badge variant="secondary">Kepala Keluarga</Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {group.head_of_family_id === user?.id && (
+                    <Badge variant="secondary">Kepala Keluarga</Badge>
+                  )}
+                  {/* Tombol hapus hanya untuk kepala keluarga */}
+                  {group.head_of_family_id === user?.id && (
+                    <Button size="icon" variant="destructive" onClick={() => handleDeleteGroup(group.id)}>
+                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </Button>
+                  )}
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                {/* Avatars anggota grup */}
+                <div className="flex items-center gap-2 mb-2">
+                  {groupMembers && groupMembers.filter(m => m.group_id === group.id).map((member) => (
+                    <div key={member.user_id} className="flex flex-col items-center">
+                      <div className="h-7 w-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-blue-700">
+                        {member.profile?.full_name?.[0]?.toUpperCase() || "?"}
+                      </div>
+                      <span className="text-[10px] mt-1 text-gray-500 max-w-[40px] truncate">{member.profile?.full_name?.split(" ")[0]}</span>
+                    </div>
+                  ))}
+                </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Kode Undangan:</span>
                   <Badge variant="outline" className="font-mono">
@@ -413,46 +455,7 @@ const Index = () => {
   const renderSettings = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold">Pengaturan</h2>
-      
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Profil Pengguna</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>Nama</Label>
-              <p className="text-sm font-medium">{profile?.full_name}</p>
-            </div>
-            <div>
-              <Label>Email</Label>
-              <p className="text-sm font-medium">{user?.email}</p>
-            </div>
-            <div>
-              <Label>Role</Label>
-              <Badge className={isHeadOfFamily ? "bg-blue-500" : "bg-gray-500"}>
-                {isHeadOfFamily ? "Kepala Keluarga" : "Anggota"}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Aksi</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              variant="destructive"
-              onClick={signOut}
-              className="w-full"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Keluar
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <ProfileSection />
     </div>
   );
 
