@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Users, Home, MessageSquare, Settings, Monitor, Plus, Bell, Wifi, Smartphone, LogOut, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -150,7 +151,7 @@ const Index = () => {
           {activities.slice(0, 5).map((activity, index) => (
             <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
               <div className="flex-1">
-                <p className="text-sm">{activity.profile?.full_name || 'Unknown'} menggunakan {activity.app_name}</p>
+                <p className="text-sm">{activity.user.full_name} menggunakan {activity.app_name}</p>
                 <p className="text-xs text-gray-500">
                   {new Date(activity.timestamp).toLocaleString('id-ID')}
                 </p>
@@ -289,7 +290,7 @@ const Index = () => {
               <CardTitle className="flex items-center justify-between text-lg">
                 <div className="flex items-center gap-2">
                   <Smartphone className="h-5 w-5" />
-                  {device.profile?.full_name || 'Unknown User'}
+                  {device.user.full_name}
                 </div>
                 <div className={`w-3 h-3 rounded-full ${device.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
               </CardTitle>
@@ -324,7 +325,7 @@ const Index = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => handleSendNotification(`${device.profile?.full_name || 'Unknown User'}, mohon perhatikan penggunaan device!`)}
+                    onClick={() => handleSendNotification(`${device.user.full_name}, mohon perhatikan penggunaan device!`)}
                   >
                     <Bell className="h-4 w-4 mr-1" />
                     Kirim Notifikasi
@@ -374,7 +375,7 @@ const Index = () => {
                     }`}
                   >
                     <p className="text-sm font-medium">
-                      {message.is_system_notification ? '🔔 Sistem' : message.sender?.full_name || 'Unknown'}
+                      {message.is_system_notification ? '🔔 Sistem' : message.sender.full_name}
                     </p>
                     <p className="text-sm">{message.message}</p>
                     <p className="text-xs text-gray-500">
