@@ -77,7 +77,7 @@ export function useDeviceMonitoring() {
         .from('devices')
         .select(`
           *,
-          profile:profiles(full_name)
+          profiles!devices_user_id_fkey(full_name)
         `)
         .order('last_seen', { ascending: false });
 
@@ -86,8 +86,8 @@ export function useDeviceMonitoring() {
       // Map the data to match our type structure
       const mappedDevices = (data || []).map(device => ({
         ...device,
-        profile: device.profile ? { full_name: device.profile.full_name } : undefined
-      }));
+        profile: device.profiles ? { full_name: device.profiles.full_name } : undefined
+      })) as Device[];
       
       setDevices(mappedDevices);
     } catch (error) {
@@ -103,7 +103,7 @@ export function useDeviceMonitoring() {
         .from('activity_logs')
         .select(`
           *,
-          profile:profiles(full_name)
+          profiles!activity_logs_user_id_fkey(full_name)
         `)
         .order('timestamp', { ascending: false })
         .limit(50);
@@ -113,8 +113,8 @@ export function useDeviceMonitoring() {
       // Map the data to match our type structure
       const mappedActivities = (data || []).map(activity => ({
         ...activity,
-        profile: activity.profile ? { full_name: activity.profile.full_name } : undefined
-      }));
+        profile: activity.profiles ? { full_name: activity.profiles.full_name } : undefined
+      })) as ActivityLog[];
       
       setActivities(mappedActivities);
     } catch (error) {
