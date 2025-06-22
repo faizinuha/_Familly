@@ -41,11 +41,13 @@ export function useFamilyGroups() {
     if (!user) return null;
 
     try {
+      // Don't provide invite_code - let the trigger generate it
       const { data, error } = await supabase
         .from('family_groups')
         .insert({
           name,
-          head_of_family_id: user.id
+          head_of_family_id: user.id,
+          invite_code: '' // Will be replaced by trigger
         })
         .select()
         .single();

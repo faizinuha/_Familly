@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
 type GroupMessage = Tables<'group_messages'> & {
-  sender: {
+  sender?: {
     full_name: string;
   };
 };
@@ -61,7 +61,14 @@ export function useGroupMessages(groupId: string | null) {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+      
+      // Map the data to match our type structure
+      const mappedMessages = (data || []).map(message => ({
+        ...message,
+        sender: message.sender ? { full_name: message.sender.full_name } : undefined
+      }));
+      
+      setMessages(mappedMessages);
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
