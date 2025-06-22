@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.example.app',
-  appName: 'com.good-family.app',
+  appId: 'com.Vvi_studio.app',
+  appName: 'Family',
   webDir: 'dist'
 };
 
