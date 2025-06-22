@@ -77,7 +77,7 @@ export function useDeviceMonitoring() {
         .from('devices')
         .select(`
           *,
-          profiles!devices_user_id_fkey(full_name)
+          profiles(full_name)
         `)
         .order('last_seen', { ascending: false });
 
@@ -103,7 +103,7 @@ export function useDeviceMonitoring() {
         .from('activity_logs')
         .select(`
           *,
-          profiles!activity_logs_user_id_fkey(full_name)
+          profiles(full_name)
         `)
         .order('timestamp', { ascending: false })
         .limit(50);

@@ -55,7 +55,7 @@ export function useGroupMessages(groupId: string | null) {
         .from('group_messages')
         .select(`
           *,
-          profiles!group_messages_sender_id_fkey(full_name)
+          profiles(full_name)
         `)
         .eq('group_id', groupId)
         .order('created_at', { ascending: true });
