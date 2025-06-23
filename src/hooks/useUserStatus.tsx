@@ -52,8 +52,15 @@ export function useUserStatus() {
 
   const fetchUserStatuses = async () => {
     try {
-      // Use raw SQL query since user_status table might not be in types yet
-      const { data, error } = await supabase.rpc('get_user_statuses');
+      // Fetch user statuses with a simple query since RPC might not exist
+      const { data, error } = await supabase
+        .from('user_status')
+        .select(`
+          *,
+          profiles:user_id (
+            full_name
+          )
+        `);
 
       if (error) {
         console.error('Error fetching user statuses:', error);
@@ -73,12 +80,16 @@ export function useUserStatus() {
     if (!user) return;
 
     try {
-      // Use raw SQL to update status since table might not be in types
-      const { error } = await supabase.rpc('update_user_status', {
-        p_user_id: user.id,
-        p_is_online: isOnline,
-        p_current_activity: currentActivity || null
-      });
+      // Update user status using upsert
+      const { error } = await supabase
+        .from('user_status')
+        .upsert({
+          user_id: user.id,
+          is_online: isOnline,
+          current_activity: currentActivity || null,
+          last_seen: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
 
       if (error) {
         console.error('Error updating status:', error);
