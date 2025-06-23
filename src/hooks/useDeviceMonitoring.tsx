@@ -5,13 +5,13 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Device = Tables<'devices'> & {
-  profile?: {
+  profiles?: {
     full_name: string;
   };
 };
 
 type ActivityLog = Tables<'activity_logs'> & {
-  profile?: {
+  profiles?: {
     full_name: string;
   };
 };
@@ -77,7 +77,7 @@ export function useDeviceMonitoring() {
         .from('devices')
         .select(`
           *,
-          profiles!devices_user_id_fkey(full_name)
+          profiles(full_name)
         `)
         .order('last_seen', { ascending: false });
 
@@ -91,6 +91,7 @@ export function useDeviceMonitoring() {
       setDevices(mappedDevices);
     } catch (error) {
       console.error('Error fetching devices:', error);
+      setDevices([]);
     } finally {
       setLoading(false);
     }
@@ -102,7 +103,7 @@ export function useDeviceMonitoring() {
         .from('activity_logs')
         .select(`
           *,
-          profiles!activity_logs_user_id_fkey(full_name)
+          profiles(full_name)
         `)
         .order('timestamp', { ascending: false })
         .limit(50);
@@ -117,6 +118,7 @@ export function useDeviceMonitoring() {
       setActivities(mappedActivities);
     } catch (error) {
       console.error('Error fetching activities:', error);
+      setActivities([]);
     }
   };
 

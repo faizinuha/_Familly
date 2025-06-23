@@ -2,9 +2,15 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
 
-type UserStatus = Tables<'user_status'> & {
+type UserStatus = {
+  id: string;
+  user_id: string;
+  is_online: boolean;
+  last_seen: string | null;
+  current_activity: string | null;
+  created_at: string | null;
+  updated_at: string | null;
   profile?: {
     full_name: string;
   };
@@ -37,50 +43,27 @@ export function useUserStatus() {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
 
-    // Real-time subscription
-    const channel = supabase
-      .channel('user-status-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_status'
-        },
-        () => {
-          fetchUserStatuses();
-        }
-      )
-      .subscribe();
-
     return () => {
       clearInterval(statusInterval);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       updateMyStatus(false);
-      supabase.removeChannel(channel);
     };
   }, [user]);
 
   const fetchUserStatuses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_status')
-        .select(`
-          *,
-          profiles!user_status_user_id_fkey(full_name)
-        `)
-        .order('last_seen', { ascending: false });
+      // Use raw SQL query since user_status table might not be in types yet
+      const { data, error } = await supabase.rpc('get_user_statuses');
 
-      if (error) throw error;
-      
-      const mappedStatuses = (data || []).map(status => ({
-        ...status,
-        profile: status.profiles ? { full_name: status.profiles.full_name } : undefined
-      })) as UserStatus[];
-      
-      setUserStatuses(mappedStatuses);
+      if (error) {
+        console.error('Error fetching user statuses:', error);
+        setUserStatuses([]);
+      } else {
+        setUserStatuses(data || []);
+      }
     } catch (error) {
       console.error('Error fetching user statuses:', error);
+      setUserStatuses([]);
     } finally {
       setLoading(false);
     }
@@ -90,17 +73,16 @@ export function useUserStatus() {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('user_status')
-        .upsert({
-          user_id: user.id,
-          is_online: isOnline,
-          last_seen: new Date().toISOString(),
-          current_activity: currentActivity,
-          updated_at: new Date().toISOString()
-        });
+      // Use raw SQL to update status since table might not be in types
+      const { error } = await supabase.rpc('update_user_status', {
+        p_user_id: user.id,
+        p_is_online: isOnline,
+        p_current_activity: currentActivity || null
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating status:', error);
+      }
     } catch (error) {
       console.error('Error updating status:', error);
     }

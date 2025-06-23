@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from './useAuth';
 
 type GroupMessage = Tables<'group_messages'> & {
-  sender?: {
+  profiles?: {
     full_name: string;
   };
 };
@@ -53,7 +53,7 @@ export function useGroupMessages(groupId: string | null) {
         .from('group_messages')
         .select(`
           *,
-          profiles!group_messages_sender_id_fkey(full_name)
+          profiles(full_name)
         `)
         .eq('group_id', groupId)
         .order('created_at', { ascending: true });
@@ -68,6 +68,7 @@ export function useGroupMessages(groupId: string | null) {
       setMessages(mappedMessages);
     } catch (error) {
       console.error('❌ Error fetching messages:', error);
+      setMessages([]);
     } finally {
       setLoading(false);
     }
