@@ -1,9 +1,9 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.Vvi_studio.app',
+  appId: 'com.vvi_studio.family',
   appName: 'Family',
-  webDir: 'dist'
+  webDir: 'dist',
 };
 
 export default config;
