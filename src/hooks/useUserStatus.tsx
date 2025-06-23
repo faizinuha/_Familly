@@ -1,9 +1,8 @@
-
-import { useState, useEffect } from 'react';
-import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState } from 'react';
+import { useAuth } from './useAuth';
 
-type UserStatus = {
+export type UserStatus = {
   id: string;
   user_id: string;
   is_online: boolean;
@@ -11,10 +10,24 @@ type UserStatus = {
   current_activity: string | null;
   created_at: string | null;
   updated_at: string | null;
-  profile?: {
-    full_name: string;
-  };
 };
+
+declare module '@supabase/supabase-js' {
+  export interface Database {
+    public: {
+      Tables: {
+        user_status: {
+          Row: UserStatus;
+          Insert: Partial<UserStatus>;
+          Update: Partial<UserStatus>;
+          Relationships: [];
+        };
+        // ...other tables
+      };
+      // ...other properties
+    };
+  }
+}
 
 export function useUserStatus() {
   const { user } = useAuth();
@@ -31,12 +44,10 @@ export function useUserStatus() {
     fetchUserStatuses();
     updateMyStatus(true);
 
-    // Update status every 30 seconds
-    const statusInterval = setInterval(() => {
+    const interval = setInterval(() => {
       updateMyStatus(true);
     }, 30000);
 
-    // Set offline when leaving
     const handleBeforeUnload = () => {
       updateMyStatus(false);
     };
@@ -44,7 +55,7 @@ export function useUserStatus() {
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      clearInterval(statusInterval);
+      clearInterval(interval);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       updateMyStatus(false);
     };
@@ -52,24 +63,26 @@ export function useUserStatus() {
 
   const fetchUserStatuses = async () => {
     try {
-      // Fetch user statuses with a simple query since RPC might not exist
       const { data, error } = await supabase
         .from('user_status')
         .select(`
-          *,
-          profiles:user_id (
-            full_name
-          )
+          id,
+          user_id,
+          is_online,
+          last_seen,
+          current_activity,
+          created_at,
+          updated_at
         `);
 
       if (error) {
         console.error('Error fetching user statuses:', error);
-        setUserStatuses([]);
-      } else {
-        setUserStatuses(data || []);
+        return setUserStatuses([]);
       }
-    } catch (error) {
-      console.error('Error fetching user statuses:', error);
+
+      setUserStatuses(data as UserStatus[]);
+    } catch (err) {
+      console.error('Unexpected error fetching statuses:', err);
       setUserStatuses([]);
     } finally {
       setLoading(false);
@@ -80,29 +93,24 @@ export function useUserStatus() {
     if (!user) return;
 
     try {
-      // Update user status using upsert
-      const { error } = await supabase
-        .from('user_status')
-        .upsert({
-          user_id: user.id,
-          is_online: isOnline,
-          current_activity: currentActivity || null,
-          last_seen: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
+      const { error } = await supabase.from('user_status').upsert({
+        user_id: user.id,
+        is_online: isOnline,
+        last_seen: new Date().toISOString(),
+        current_activity: currentActivity || null,
+        updated_at: new Date().toISOString(),
+      });
 
-      if (error) {
-        console.error('Error updating status:', error);
-      }
-    } catch (error) {
-      console.error('Error updating status:', error);
+      if (error) console.error('Error updating status:', error);
+    } catch (err) {
+      console.error('Unexpected error updating status:', err);
     }
   };
 
   const getOnlineUsers = () => {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    return userStatuses.filter(status => 
-      status.is_online && new Date(status.last_seen || '') > fiveMinutesAgo
+    return userStatuses.filter(
+      (s) => s.is_online && new Date(s.last_seen || '') > fiveMinutesAgo
     );
   };
 
@@ -111,6 +119,6 @@ export function useUserStatus() {
     loading,
     updateMyStatus,
     getOnlineUsers,
-    refreshStatuses: fetchUserStatuses
+    refreshStatuses: fetchUserStatuses,
   };
 }
