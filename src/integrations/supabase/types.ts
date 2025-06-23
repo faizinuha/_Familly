@@ -45,6 +45,13 @@ export type Database = {
             referencedRelation: "devices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_activity_logs_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       devices: {
@@ -84,7 +91,15 @@ export type Database = {
           user_id?: string
           wifi_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_devices_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       family_groups: {
         Row: {
@@ -174,6 +189,13 @@ export type Database = {
           sender_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_group_messages_profiles"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "group_messages_group_id_fkey"
             columns: ["group_id"]
@@ -282,10 +304,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      generate_invite_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
       device_status: "online" | "offline"

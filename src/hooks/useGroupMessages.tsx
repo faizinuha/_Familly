@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { useEffect, useState } from 'react';
@@ -34,15 +35,7 @@ export function useGroupMessages(groupId: string | null) {
           filter: `group_id=eq.${groupId}`,
         },
         (payload) => {
-          setMessages((prev) => [
-            ...prev,
-            {
-              ...(payload.new as GroupMessage),
-              sender: payload.new.sender
-                ? { full_name: payload.new.sender.full_name }
-                : undefined,
-            },
-          ]);
+          fetchMessages(); // Refresh to get proper relations
         }
       )
       .subscribe();
@@ -53,23 +46,23 @@ export function useGroupMessages(groupId: string | null) {
   }, [groupId, user]);
 
   const fetchMessages = async () => {
-    if (!groupId) return;
+    if (!groupId || !user) return;
 
     try {
       const { data, error } = await supabase
         .from('group_messages')
-        .select('*') // Tidak pakai join ke profiles
+        .select(`
+          *,
+          profiles!group_messages_sender_id_fkey(full_name)
+        `)
         .eq('group_id', groupId)
-        .order('created_at', { ascending: true })
-        .throwOnError();
+        .order('created_at', { ascending: true });
 
-      // Mapping nama pengirim: jika sender_id == user.id, pakai nama user, selain itu Unknown
+      if (error) throw error;
+
       const mappedMessages = (data || []).map((message) => ({
         ...message,
-        sender:
-          message.sender_id === user?.id
-            ? { full_name: user?.user_metadata?.full_name || 'Saya' }
-            : { full_name: 'Unknown' },
+        sender: message.profiles ? { full_name: message.profiles.full_name } : { full_name: 'Unknown' }
       })) as GroupMessage[];
 
       setMessages(mappedMessages);
@@ -80,22 +73,24 @@ export function useGroupMessages(groupId: string | null) {
     }
   };
 
-  const sendMessage = async (message: string, mentions: string[] = []) => {
-    if (!user || !groupId || !message.trim()) return;
+  const sendMessage = async (message: string, mentions: string[] = [], fileUrl?: string, fileType?: string, fileName?: string) => {
+    if (!user || !groupId || (!message.trim() && !fileUrl)) return;
 
     try {
       const { error } = await supabase.from('group_messages').insert({
         group_id: groupId,
         sender_id: user.id,
-        message: message.trim(),
+        message: message.trim() || '',
         mentions,
+        file_url: fileUrl,
+        file_type: fileType,
+        file_name: fileName,
       });
 
       if (error) throw error;
-      // Fetch ulang pesan setelah kirim
-      await fetchMessages();
     } catch (error) {
       console.error('❌ Error sending message:', error);
+      throw error;
     }
   };
 
@@ -117,11 +112,40 @@ export function useGroupMessages(groupId: string | null) {
     }
   };
 
+  const uploadFile = async (file: File) => {
+    if (!user || !groupId) return null;
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('chat-files')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('chat-files')
+        .getPublicUrl(fileName);
+
+      return {
+        url: data.publicUrl,
+        name: file.name,
+        type: file.type
+      };
+    } catch (error) {
+      console.error('❌ Error uploading file:', error);
+      throw error;
+    }
+  };
+
   return {
     messages,
     loading,
     sendMessage,
     sendSystemNotification,
+    uploadFile,
     refreshMessages: fetchMessages,
   };
 }

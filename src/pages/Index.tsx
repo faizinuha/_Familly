@@ -11,8 +11,11 @@ import { useProfile } from "@/hooks/useProfile";
 import { useFamilyGroups } from "@/hooks/useFamilyGroups";
 import { useGroupMessages } from "@/hooks/useGroupMessages";
 import { useDeviceMonitoring } from "@/hooks/useDeviceMonitoring";
+import { useUserStatus } from "@/hooks/useUserStatus";
 import { useToast } from "@/hooks/use-toast";
 import ProfileSection from "@/components/ProfileSection";
+import ChatMessage from "@/components/ChatMessage";
+import ChatInput from "@/components/ChatInput";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
 
 const Index = () => {
@@ -20,13 +23,13 @@ const Index = () => {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [newGroupName, setNewGroupName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
-  const [newMessage, setNewMessage] = useState("");
   
   const { user, signOut } = useAuth();
   const { profile, isHeadOfFamily } = useProfile();
   const { groups, createGroup, joinGroup, refreshGroups } = useFamilyGroups();
-  const { messages, sendMessage, sendSystemNotification } = useGroupMessages(selectedGroupId);
+  const { messages, sendMessage, sendSystemNotification, uploadFile } = useGroupMessages(selectedGroupId);
   const { devices, activities } = useDeviceMonitoring();
+  const { getOnlineUsers, updateMyStatus } = useUserStatus();
   const { members: groupMembers } = useGroupMembers(selectedGroupId);
   const { toast } = useToast();
 
@@ -36,6 +39,13 @@ const Index = () => {
       setSelectedGroupId(groups[0].id);
     }
   }, [groups, selectedGroupId]);
+
+  // Update user activity
+  useEffect(() => {
+    updateMyStatus(true, `Menggunakan Good Family - Tab: ${activeTab}`);
+  }, [activeTab]);
+
+  const onlineUsers = getOnlineUsers();
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
@@ -81,18 +91,16 @@ const Index = () => {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
-    
+  const handleSendMessage = async (message: string, fileUrl?: string, fileType?: string, fileName?: string) => {
     try {
-      await sendMessage(newMessage);
-      setNewMessage("");
+      await sendMessage(message, [], fileUrl, fileType, fileName);
     } catch (error) {
       toast({
         title: "Error",
         description: "Gagal mengirim pesan",
         variant: "destructive"
       });
+      throw error;
     }
   };
 
@@ -112,11 +120,9 @@ const Index = () => {
     }
   };
 
-  // Tambah fungsi hapus grup
   const handleDeleteGroup = async (groupId: string) => {
     if (!window.confirm("Yakin ingin menghapus grup ini?")) return;
     try {
-      // Hanya kepala keluarga yang bisa hapus
       const { error } = await import("@/integrations/supabase/client").then(({ supabase }) =>
         supabase.from("family_groups").delete().eq("id", groupId)
       );
@@ -141,7 +147,7 @@ const Index = () => {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="h-8 w-8 text-blue-500 mx-auto mb-2" />
@@ -156,7 +162,47 @@ const Index = () => {
             <div className="text-sm text-gray-600">Device Online</div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="w-3 h-3 bg-green-500 rounded-full mx-auto mb-2"></div>
+            <div className="text-2xl font-bold">{onlineUsers.length}</div>
+            <div className="text-sm text-gray-600">User Online</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <Bell className="h-8 w-8 text-orange-500 mx-auto mb-2" />
+            <div className="text-2xl font-bold">{activities.length}</div>
+            <div className="text-sm text-gray-600">Aktivitas</div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Online Users */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            User Online ({onlineUsers.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {onlineUsers.map((userStatus) => (
+              <div key={userStatus.id} className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded-full">
+                <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-bold">
+                  {userStatus.profile?.full_name?.[0]?.toUpperCase() || '?'}
+                </div>
+                <span className="text-sm font-medium">{userStatus.profile?.full_name || 'Unknown'}</span>
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              </div>
+            ))}
+            {onlineUsers.length === 0 && (
+              <p className="text-sm text-gray-500">Tidak ada user online</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent Activities */}
       <Card>
@@ -169,10 +215,15 @@ const Index = () => {
         <CardContent className="space-y-3">
           {activities.slice(0, 5).map((activity, index) => (
             <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
+                {activity.profile?.full_name?.[0]?.toUpperCase() || '?'}
+              </div>
               <div className="flex-1">
-                <p className="text-sm">{activity.profile?.full_name || 'Unknown'} menggunakan {activity.app_name}</p>
-                <p className="text-xs text-gray-500">
-                  {new Date(activity.timestamp).toLocaleString('id-ID')}
+                <p className="text-sm font-medium">{activity.profile?.full_name || 'Unknown'}</p>
+                <p className="text-sm text-gray-600">Menggunakan {activity.app_name}</p>
+                <p className="text-xs text-gray-400 flex items-center gap-1">
+                  <span>🕐</span>
+                  {new Date(activity.timestamp || '').toLocaleString('id-ID')}
                 </p>
               </div>
             </div>
@@ -255,7 +306,6 @@ const Index = () => {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  {/* Avatar grup: huruf pertama nama grup */}
                   <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 text-blue-700 font-bold text-lg">
                     {group.name[0]?.toUpperCase()}
                   </div>
@@ -265,7 +315,6 @@ const Index = () => {
                   {group.head_of_family_id === user?.id && (
                     <Badge variant="secondary">Kepala Keluarga</Badge>
                   )}
-                  {/* Tombol hapus hanya untuk kepala keluarga */}
                   {group.head_of_family_id === user?.id && (
                     <Button size="icon" variant="destructive" onClick={() => handleDeleteGroup(group.id)}>
                       <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -276,7 +325,6 @@ const Index = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {/* Avatars anggota grup */}
                 <div className="flex items-center gap-2 mb-2">
                   {groupMembers && groupMembers.filter(m => m.group_id === group.id).map((member) => (
                     <div key={member.user_id} className="flex flex-col items-center">
@@ -389,8 +437,8 @@ const Index = () => {
     const selectedGroup = groups.find(g => g.id === selectedGroupId);
     
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col h-full max-h-screen">
+        <div className="flex items-center justify-between p-4 border-b bg-white">
           <h2 className="text-xl font-bold">Chat Grup</h2>
           {selectedGroup && (
             <Badge variant="secondary">{selectedGroup.name}</Badge>
@@ -398,53 +446,33 @@ const Index = () => {
         </div>
 
         {selectedGroup ? (
-          <Card className="h-96">
-            <CardHeader>
-              <CardTitle className="text-lg">{selectedGroup.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col h-full">
-              <div className="flex-1 space-y-3 mb-4 overflow-y-auto">
-                {messages.map((message) => (
-                  <div 
-                    key={message.id} 
-                    className={`p-3 rounded-lg ${
-                      message.is_system_notification 
-                        ? 'bg-yellow-50 border border-yellow-200' 
-                        : message.sender_id === user?.id 
-                          ? 'bg-blue-50 ml-8' 
-                          : 'bg-gray-50'
-                    }`}
-                  >
-                    <p className="text-sm font-medium">
-                      {message.is_system_notification ? '🔔 Sistem' : message.sender?.full_name || 'Unknown'}
-                    </p>
-                    <p className="text-sm">{message.message}</p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(message.created_at).toLocaleString('id-ID')}
-                    </p>
-                  </div>
-                ))}
-                {messages.length === 0 && (
-                  <p className="text-sm text-gray-500 text-center">Belum ada pesan</p>
-                )}
-              </div>
-              <div className="border-t pt-3">
-                <div className="flex gap-2">
-                  <Input 
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Ketik pesan..." 
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  />
-                  <Button size="sm" onClick={handleSendMessage}>
-                    Kirim
-                  </Button>
+          <div className="flex flex-col flex-1 min-h-0">
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-1">
+              {messages.map((message) => (
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                  currentUserId={user?.id || ''}
+                />
+              ))}
+              {messages.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Belum ada pesan. Mulai percakapan!</p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              )}
+            </div>
+            
+            {/* Chat Input */}
+            <div className="border-t bg-white">
+              <ChatInput
+                onSendMessage={handleSendMessage}
+                onUploadFile={uploadFile}
+              />
+            </div>
+          </div>
         ) : (
-          <div className="text-center py-8">
+          <div className="flex-1 flex items-center justify-center">
             <p className="text-gray-500">Pilih grup untuk mulai chat</p>
           </div>
         )}
@@ -460,7 +488,7 @@ const Index = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <div className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-md mx-auto px-4 py-3">
@@ -468,7 +496,7 @@ const Index = () => {
             <h1 className="text-lg font-bold text-blue-600">Good Family</h1>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-xs">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
                 Online
               </Badge>
             </div>
@@ -477,16 +505,18 @@ const Index = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-md mx-auto px-4 py-6">
-        {activeTab === "home" && renderHome()}
-        {activeTab === "groups" && renderGroups()}
-        {activeTab === "monitoring" && renderMonitoring()}
-        {activeTab === "chat" && renderChat()}
-        {activeTab === "settings" && renderSettings()}
+      <div className={`flex-1 ${activeTab === 'chat' ? 'flex flex-col' : ''}`}>
+        <div className={`max-w-md mx-auto ${activeTab === 'chat' ? 'flex flex-col h-full' : 'px-4 py-6'}`}>
+          {activeTab === "home" && renderHome()}
+          {activeTab === "groups" && renderGroups()}
+          {activeTab === "monitoring" && renderMonitoring()}
+          {activeTab === "chat" && renderChat()}
+          {activeTab === "settings" && renderSettings()}
+        </div>
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
+      <div className="bg-white border-t shadow-lg mt-auto">
         <div className="max-w-md mx-auto">
           <div className="flex items-center justify-around py-2 gap-1">
             {[
@@ -515,9 +545,6 @@ const Index = () => {
           </div>
         </div>
       </div>
-
-      {/* Spacing for bottom nav */}
-      <div className="h-20"></div>
     </div>
   );
 };

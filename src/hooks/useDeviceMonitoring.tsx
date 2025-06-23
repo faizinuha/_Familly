@@ -77,13 +77,12 @@ export function useDeviceMonitoring() {
         .from('devices')
         .select(`
           *,
-          profiles(full_name)
+          profiles!devices_user_id_fkey(full_name)
         `)
         .order('last_seen', { ascending: false });
 
       if (error) throw error;
       
-      // Map the data to match our type structure
       const mappedDevices = (data || []).map(device => ({
         ...device,
         profile: device.profiles ? { full_name: device.profiles.full_name } : undefined
@@ -103,14 +102,13 @@ export function useDeviceMonitoring() {
         .from('activity_logs')
         .select(`
           *,
-          profiles(full_name)
+          profiles!activity_logs_user_id_fkey(full_name)
         `)
         .order('timestamp', { ascending: false })
         .limit(50);
 
       if (error) throw error;
       
-      // Map the data to match our type structure
       const mappedActivities = (data || []).map(activity => ({
         ...activity,
         profile: activity.profiles ? { full_name: activity.profiles.full_name } : undefined
