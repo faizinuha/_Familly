@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -191,12 +190,14 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       <Header />
       
-      <div className={`flex-1 ${activeTab === 'chat' ? 'flex flex-col' : ''}`}>
-        <div className={`max-w-md mx-auto ${activeTab === 'chat' ? 'flex flex-col h-full' : 'px-4 py-6'}`}>
-          {renderContent()}
+      <div className="flex-1 overflow-hidden">
+        <div className={`h-full ${activeTab === 'chat' ? 'flex flex-col' : ''}`}>
+          <div className={`max-w-md mx-auto h-full ${activeTab === 'chat' ? 'flex flex-col' : 'overflow-y-auto px-4 py-6'}`}>
+            {renderContent()}
+          </div>
         </div>
       </div>
 

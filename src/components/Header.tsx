@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 
 const Header: React.FC = () => {
   return (
-    <div className="bg-white shadow-sm border-b sticky top-0 z-10">
+    <div className="bg-white shadow-sm border-b shrink-0 safe-area-top">
       <div className="max-w-md mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-bold text-blue-600">Good Family</h1>
