@@ -87,7 +87,8 @@ export function useFamilyGroups() {
       const { data: group, error: groupError } = await supabase
         .from('family_groups')
         .select('*')
-        .eq('invite_code', inviteCode.toUpperCase())
+        .eq('invite_code', inviteCode.trim()) // Jangan ubah case 
+        // ganti ke trim karena kode awal adalah ToUpperCase
         .single();
 
       if (groupError) throw new Error('Kode undangan tidak valid');
