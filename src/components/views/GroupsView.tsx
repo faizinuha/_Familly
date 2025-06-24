@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Plus, UserPlus } from "lucide-react";
+import { Plus, UserPlus, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +35,23 @@ const GroupsView: React.FC<GroupsViewProps> = ({
   onDeleteGroup,
   onSelectGroup
 }) => {
+  const handleLeaveGroup = async (groupId: string) => {
+    if (!window.confirm("Yakin ingin keluar dari grup ini?")) return;
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { error } = await supabase
+        .from("group_members")
+        .delete()
+        .eq("group_id", groupId)
+        .eq("user_id", user?.id);
+      
+      if (error) throw error;
+      window.location.reload(); // Refresh untuk update data
+    } catch (error) {
+      console.error("Error leaving group:", error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -100,58 +117,91 @@ const GroupsView: React.FC<GroupsViewProps> = ({
 
       {/* Groups List */}
       <div className="space-y-4">
-        {groups.map((group) => (
-          <Card key={group.id}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 text-blue-700 font-bold text-lg">
-                    {group.name[0]?.toUpperCase()}
-                  </div>
-                  {group.name}
-                </div>
-                <div className="flex items-center gap-2">
-                  {group.head_of_family_id === user?.id && (
-                    <Badge variant="secondary">Kepala Keluarga</Badge>
-                  )}
-                  {group.head_of_family_id === user?.id && (
-                    <Button size="icon" variant="destructive" onClick={() => onDeleteGroup(group.id)}>
-                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </Button>
-                  )}
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  {groupMembers && groupMembers.filter(m => m.group_id === group.id).map((member) => (
-                    <div key={member.user_id} className="flex flex-col items-center">
-                      <div className="h-7 w-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-blue-700">
-                        {member.profile?.full_name?.[0]?.toUpperCase() || "?"}
-                      </div>
-                      <span className="text-[10px] mt-1 text-gray-500 max-w-[40px] truncate">{member.profile?.full_name?.split(" ")[0]}</span>
+        {groups.map((group) => {
+          const isHeadOfFamily = group.head_of_family_id === user?.id;
+          return (
+            <Card key={group.id}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 text-blue-700 font-bold text-lg">
+                      {group.name[0]?.toUpperCase()}
                     </div>
-                  ))}
+                    <div className="flex flex-col">
+                      <span>{group.name}</span>
+                      {isHeadOfFamily && (
+                        <Badge variant="default" className="bg-yellow-500 text-white text-xs w-fit">
+                          Kepala Keluarga
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isHeadOfFamily && (
+                      <Button 
+                        size="icon" 
+                        variant="destructive" 
+                        onClick={() => onDeleteGroup(group.id)}
+                        className="h-8 w-8"
+                      >
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </Button>
+                    )}
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    {groupMembers && groupMembers.filter(m => m.group_id === group.id).map((member) => (
+                      <div key={member.user_id} className="flex flex-col items-center">
+                        <div className="h-7 w-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-blue-700">
+                          {member.profile?.full_name?.[0]?.toUpperCase() || "?"}
+                        </div>
+                        <span className="text-[10px] mt-1 text-gray-500 max-w-[40px] truncate">
+                          {member.profile?.full_name?.split(" ")[0]}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Kode Undangan:</span>
+                    <Badge variant="outline" className="font-mono">
+                      {group.invite_code}
+                    </Badge>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    {isHeadOfFamily ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => onSelectGroup(group.id)}
+                        className="flex-1"
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Kelola Grup
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleLeaveGroup(group.id)}
+                        className="flex-1 text-red-600 hover:text-red-700"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Keluar Grup
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Kode Undangan:</span>
-                  <Badge variant="outline" className="font-mono">
-                    {group.invite_code}
-                  </Badge>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => onSelectGroup(group.id)}
-                  className="w-full"
-                >
-                  Lihat Detail
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
         {groups.length === 0 && (
           <div className="text-center py-8">
             <p className="text-gray-500">Belum ada grup. Buat atau gabung ke grup untuk memulai!</p>

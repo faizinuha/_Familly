@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -8,6 +7,7 @@ import { useDeviceMonitoring } from "@/hooks/useDeviceMonitoring";
 import { useUserStatus } from "@/hooks/useUserStatus";
 import { useToast } from "@/hooks/use-toast";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
+import { usePinAuth } from "@/hooks/usePinAuth";
 import Header from "@/components/Header";
 import Navigation from "@/components/Navigation";
 import HomeView from "@/components/views/HomeView";
@@ -15,6 +15,7 @@ import GroupsView from "@/components/views/GroupsView";
 import MonitoringView from "@/components/views/MonitoringView";
 import ChatView from "@/components/views/ChatView";
 import SettingsView from "@/components/views/SettingsView";
+import PinAuthScreen from "@/components/PinAuthScreen";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -30,6 +31,7 @@ const Index = () => {
   const { updateMyStatus } = useUserStatus();
   const { members: groupMembers } = useGroupMembers(selectedGroupId);
   const { toast } = useToast();
+  const { isAuthenticated, pinEnabled, authenticate, requireAuth } = usePinAuth();
 
   // Auto-select first group
   useEffect(() => {
@@ -42,6 +44,18 @@ const Index = () => {
   useEffect(() => {
     updateMyStatus(true, `Menggunakan Good Family - Tab: ${activeTab}`);
   }, [activeTab, updateMyStatus]);
+
+  // Handle app blur/focus for PIN auth
+  useEffect(() => {
+    const handleBlur = () => {
+      if (pinEnabled) {
+        setTimeout(() => requireAuth(), 100);
+      }
+    };
+
+    window.addEventListener('blur', handleBlur);
+    return () => window.removeEventListener('blur', handleBlur);
+  }, [pinEnabled, requireAuth]);
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
@@ -186,6 +200,11 @@ const Index = () => {
         return null;
     }
   };
+
+  // Show PIN authentication screen if not authenticated
+  if (pinEnabled && !isAuthenticated) {
+    return <PinAuthScreen onAuthenticated={authenticate} />;
+  }
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">

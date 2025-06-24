@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, Calendar, User } from "lucide-react";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
+import AddContactDialog from "./AddContactDialog";
 
 interface ContactSidebarProps {
   isOpen: boolean;
@@ -16,7 +17,7 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
   onClose,
   selectedGroup
 }) => {
-  const { members } = useGroupMembers(selectedGroup?.id);
+  const { members, refreshMembers } = useGroupMembers(selectedGroup?.id);
 
   if (!isOpen) return null;
 
@@ -31,18 +32,27 @@ const ContactSidebar: React.FC<ContactSidebarProps> = ({
 
       <div className="p-4 space-y-4 overflow-y-auto h-full">
         {selectedGroup && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Info Grup</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="font-medium">{selectedGroup.name}</p>
-              <p className="text-xs text-gray-500 flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                Dibuat: {new Date(selectedGroup.created_at).toLocaleDateString('id-ID')}
-              </p>
-            </CardContent>
-          </Card>
+          <>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Info Grup</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="font-medium">{selectedGroup.name}</p>
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  Dibuat: {new Date(selectedGroup.created_at).toLocaleDateString('id-ID')}
+                </p>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-center">
+              <AddContactDialog 
+                groupId={selectedGroup.id} 
+                onContactAdded={refreshMembers}
+              />
+            </div>
+          </>
         )}
 
         <Card>
