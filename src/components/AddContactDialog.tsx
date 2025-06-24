@@ -25,38 +25,20 @@ const AddContactDialog: React.FC<AddContactDialogProps> = ({ groupId, onContactA
     
     setLoading(true);
     try {
-      // Cari user berdasarkan email
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+      // Create invitation record for now - simplified approach
+      const { error: inviteError } = await supabase.from('group_invitations').insert({
+        group_id: groupId,
+        email: email,
+        invited_name: name,
+        status: 'pending'
+      });
       
-      if (userError || !userData.user) {
-        // Jika user belum ada, buat invitation
-        const { error: inviteError } = await supabase.from('group_invitations').insert({
-          group_id: groupId,
-          email: email,
-          invited_name: name,
-          status: 'pending'
-        });
-        
-        if (inviteError) throw inviteError;
-        
-        toast({
-          title: "Undangan Terkirim",
-          description: `Undangan telah dikirim ke ${email}`,
-        });
-      } else {
-        // Jika user sudah ada, langsung tambahkan ke grup
-        const { error: memberError } = await supabase.from('group_members').insert({
-          group_id: groupId,
-          user_id: userData.user.id
-        });
-        
-        if (memberError) throw memberError;
-        
-        toast({
-          title: "Kontak Ditambahkan",
-          description: `${name} berhasil ditambahkan ke grup`,
-        });
-      }
+      if (inviteError) throw inviteError;
+      
+      toast({
+        title: "Undangan Terkirim",
+        description: `Undangan telah dikirim ke ${email}`,
+      });
       
       setEmail("");
       setName("");
@@ -64,6 +46,7 @@ const AddContactDialog: React.FC<AddContactDialogProps> = ({ groupId, onContactA
       onContactAdded();
       
     } catch (error: any) {
+      console.error('Error adding contact:', error);
       toast({
         title: "Error",
         description: error.message || "Gagal menambahkan kontak",
@@ -111,7 +94,7 @@ const AddContactDialog: React.FC<AddContactDialogProps> = ({ groupId, onContactA
             disabled={!email.trim() || !name.trim() || loading}
             className="w-full"
           >
-            {loading ? "Menambahkan..." : "Tambah Kontak"}
+            {loading ? "Mengirim..." : "Kirim Undangan"}
           </Button>
         </div>
       </DialogContent>
