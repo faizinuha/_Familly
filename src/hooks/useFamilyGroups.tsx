@@ -1,8 +1,7 @@
-
-import { useState, useEffect } from 'react';
-import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { useEffect, useState } from 'react';
+import { useAuth } from './useAuth';
 
 type FamilyGroup = Tables<'family_groups'>;
 type GroupMember = Tables<'group_members'>;
@@ -22,14 +21,20 @@ export function useFamilyGroups() {
     fetchGroups();
   }, [user]);
 
+  // Update: fetch only groups where user is a member
   const fetchGroups = async () => {
     try {
       const { data, error } = await supabase
-        .from('family_groups')
-        .select('*');
+        .from('group_members')
+        .select('family_groups(*)')
+        .eq('user_id', user.id);
 
       if (error) throw error;
-      setGroups(data || []);
+      // Extract family_groups from group_members
+      const groupsData = (data || [])
+        .map((gm: { family_groups: FamilyGroup }) => gm.family_groups)
+        .filter(Boolean);
+        setGroups(groupsData);
     } catch (error) {
       console.error('Error fetching groups:', error);
     } finally {
@@ -47,7 +52,7 @@ export function useFamilyGroups() {
         .insert({
           name,
           head_of_family_id: user.id,
-          invite_code: '' // Will be replaced by trigger
+          invite_code: '', // Will be replaced by trigger
         })
         .select()
         .single();
@@ -60,7 +65,7 @@ export function useFamilyGroups() {
         .update({ role: 'head_of_family' })
         .eq('id', user.id);
 
-      setGroups(prev => [...prev, data]);
+      setGroups((prev) => [...prev, data]);
       return data;
     } catch (error) {
       console.error('Error creating group:', error);
@@ -98,12 +103,12 @@ export function useFamilyGroups() {
         .from('group_members')
         .insert({
           group_id: group.id,
-          user_id: user.id
+          user_id: user.id,
         });
 
       if (memberError) throw memberError;
 
-      setGroups(prev => [...prev, group]);
+      setGroups((prev) => [...prev, group]);
       return group;
     } catch (error) {
       console.error('Error joining group:', error);
@@ -116,6 +121,6 @@ export function useFamilyGroups() {
     loading,
     createGroup,
     joinGroup,
-    refreshGroups: fetchGroups
+    refreshGroups: fetchGroups,
   };
 }
