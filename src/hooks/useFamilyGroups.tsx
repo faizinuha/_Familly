@@ -34,7 +34,7 @@ export function useFamilyGroups() {
       const groupsData = (data || [])
         .map((gm: { family_groups: FamilyGroup }) => gm.family_groups)
         .filter(Boolean);
-        setGroups(groupsData);
+      setGroups(groupsData);
     } catch (error) {
       console.error('Error fetching groups:', error);
     } finally {
@@ -64,6 +64,12 @@ export function useFamilyGroups() {
         .from('profiles')
         .update({ role: 'head_of_family' })
         .eq('id', user.id);
+
+      // Insert user as member of the group (head of family is also a member)
+      await supabase.from('group_members').insert({
+        group_id: data.id,
+        user_id: user.id,
+      });
 
       setGroups((prev) => [...prev, data]);
       return data;

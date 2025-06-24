@@ -1,16 +1,18 @@
-
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Fingerprint } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { Fingerprint, Shield } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 interface PinAuthScreenProps {
   onAuthenticated: () => void;
   onBack?: () => void;
 }
 
-const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthenticated, onBack }) => {
+const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
+  onAuthenticated,
+  onBack,
+}) => {
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -21,8 +23,15 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthenticated, onBack }
     const settings = localStorage.getItem('securitySettings');
     if (settings) {
       const securitySettings = JSON.parse(settings);
-      setBiometricEnabled(securitySettings.fingerprintEnabled || securitySettings.faceIdEnabled);
+      setBiometricEnabled(
+        securitySettings.fingerprintEnabled || securitySettings.faceIdEnabled
+      );
     }
+    // Focus PIN input on mount
+    setTimeout(() => {
+      const input = document.getElementById('pin-input');
+      if (input) (input as HTMLInputElement).focus();
+    }, 100);
   }, []);
 
   const handlePinInput = (value: string) => {
@@ -37,20 +46,20 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthenticated, onBack }
   const validatePin = async (inputPin: string) => {
     setLoading(true);
     const savedPin = localStorage.getItem('userPin');
-    
+
     if (savedPin === inputPin) {
       toast({
-        title: "Berhasil",
-        description: "PIN benar, mengakses aplikasi...",
+        title: 'Berhasil',
+        description: 'PIN benar, mengakses aplikasi...',
       });
       setTimeout(() => {
         onAuthenticated();
       }, 500);
     } else {
       toast({
-        title: "PIN Salah",
-        description: "PIN yang Anda masukkan salah",
-        variant: "destructive"
+        title: 'PIN Salah',
+        description: 'PIN yang Anda masukkan salah',
+        variant: 'destructive',
       });
       setPin('');
     }
@@ -60,15 +69,15 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthenticated, onBack }
   const handleBiometricAuth = async () => {
     try {
       setLoading(true);
-      
+
       // Check if we're in Capacitor environment
       if (window.Capacitor?.isNativePlatform()) {
         // For real implementation, use @capacitor/biometric-auth
         const confirmed = await simulateBiometricAuth();
         if (confirmed) {
           toast({
-            title: "Berhasil",
-            description: "Autentikasi biometrik berhasil",
+            title: 'Berhasil',
+            description: 'Autentikasi biometrik berhasil',
           });
           onAuthenticated();
         }
@@ -77,17 +86,17 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthenticated, onBack }
         const confirmed = await simulateBiometricAuth();
         if (confirmed) {
           toast({
-            title: "Berhasil",
-            description: "Autentikasi biometrik berhasil",
+            title: 'Berhasil',
+            description: 'Autentikasi biometrik berhasil',
           });
           onAuthenticated();
         }
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Gagal mengautentikasi dengan biometrik",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Gagal mengautentikasi dengan biometrik',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -104,9 +113,9 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthenticated, onBack }
           resolve(true);
         } else {
           toast({
-            title: "Autentikasi Gagal",
-            description: "Silakan coba lagi atau gunakan PIN",
-            variant: "destructive"
+            title: 'Autentikasi Gagal',
+            description: 'Silakan coba lagi atau gunakan PIN',
+            variant: 'destructive',
           });
           resolve(false);
         }
@@ -122,7 +131,9 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthenticated, onBack }
             <Shield className="h-8 w-8 text-blue-600" />
           </div>
           <CardTitle>Masukkan PIN Keamanan</CardTitle>
-          <p className="text-sm text-gray-600">Aplikasi terkunci untuk keamanan</p>
+          <p className="text-sm text-gray-600">
+            Aplikasi terkunci untuk keamanan
+          </p>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* PIN Input Display */}
@@ -131,24 +142,28 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthenticated, onBack }
               <div
                 key={i}
                 className={`w-12 h-12 border-2 rounded-lg flex items-center justify-center text-xl font-bold ${
-                  pin.length > i ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                  pin.length > i
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300'
                 }`}
               >
                 {pin[i] ? '•' : ''}
               </div>
             ))}
           </div>
-          
+
           {/* Hidden input for mobile keyboards */}
           <input
-            type="text"
+            id="pin-input"
+            type="tel"
             inputMode="numeric"
             pattern="[0-9]*"
             value={pin}
             onChange={(e) => handlePinInput(e.target.value)}
-            className="opacity-0 absolute -z-10"
+            className="absolute left-0 top-0 w-1 h-1 opacity-0"
             autoFocus
             maxLength={6}
+            tabIndex={0}
           />
 
           {/* Biometric Auth Button */}
@@ -161,7 +176,7 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthenticated, onBack }
                 className="flex items-center gap-2"
               >
                 <Fingerprint className="h-4 w-4" />
-                {loading ? "Memverifikasi..." : "Gunakan Sidik Jari"}
+                {loading ? 'Memverifikasi...' : 'Gunakan Sidik Jari'}
               </Button>
             </div>
           )}
