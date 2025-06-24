@@ -13,6 +13,21 @@ interface ChatInputProps {
 
 const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '😢', '😡', '🎉', '🔥', '💯'];
 
+// File type whitelist for security
+const ALLOWED_FILE_TYPES = [
+  'image/jpeg',
+  'image/jpg', 
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'application/pdf',
+  'text/plain',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+];
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
 const ChatInput: React.FC<ChatInputProps> = ({ 
   onSendMessage, 
   onUploadFile,
@@ -28,7 +43,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     if (!message.trim()) return;
     
     try {
-      await onSendMessage(message);
+      await onSendMessage(message.trim());
       setMessage('');
     } catch (error) {
       toast({
@@ -51,17 +66,41 @@ const ChatInput: React.FC<ChatInputProps> = ({
     setShowEmojis(false);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !onUploadFile) return;
+  const validateFile = (file: File): boolean => {
+    // Check file type
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      toast({
+        title: "Error",
+        description: "Tipe file tidak diizinkan. Hanya gambar, PDF, dan dokumen yang diperbolehkan.",
+        variant: "destructive"
+      });
+      return false;
+    }
 
-    // Check file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    // Check file size
+    if (file.size > MAX_FILE_SIZE) {
       toast({
         title: "Error",
         description: "File terlalu besar. Maksimal 10MB",
         variant: "destructive"
       });
+      return false;
+    }
+
+    return true;
+  };
+
+  const sanitizeFileName = (fileName: string): string => {
+    // Remove special characters and replace with safe characters
+    return fileName.replace(/[^a-zA-Z0-9.-]/g, '_').substring(0, 100);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUploadFile) return;
+
+    if (!validateFile(file)) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
@@ -69,7 +108,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
     try {
       const uploadResult = await onUploadFile(file);
       if (uploadResult) {
-        await onSendMessage('', uploadResult.url, uploadResult.type, uploadResult.name);
+        const sanitizedName = sanitizeFileName(uploadResult.name);
+        await onSendMessage('', uploadResult.url, uploadResult.type, sanitizedName);
         toast({
           title: "Berhasil",
           description: "File berhasil dikirim"
@@ -90,7 +130,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   return (
     <div className="relative">
       {showEmojis && (
-        <div className="absolute bottom-full left-0 mb-2 p-2 bg-white border border-gray-200 rounded-lg shadow-lg">
+        <div className="absolute bottom-full left-0 mb-2 p-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
           <div className="grid grid-cols-6 gap-1">
             {emojis.map((emoji, index) => (
               <button
@@ -141,6 +181,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           placeholder="Ketik pesan..."
           disabled={disabled || uploading}
           className="flex-1"
+          maxLength={1000}
         />
         
         <Button

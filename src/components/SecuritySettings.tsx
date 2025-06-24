@@ -2,11 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Shield, Lock, Fingerprint, Eye } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import PinSetupProcess from "./PinSetupProcess";
 
 interface SecuritySettingsProps {
   onBack: () => void;
@@ -16,10 +14,7 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
   const [pinEnabled, setPinEnabled] = useState(false);
   const [faceIdEnabled, setFaceIdEnabled] = useState(false);
   const [fingerprintEnabled, setFingerprintEnabled] = useState(false);
-  const [currentPin, setCurrentPin] = useState('');
-  const [newPin, setNewPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
-  const [showPinDialog, setShowPinDialog] = useState(false);
+  const [showPinSetup, setShowPinSetup] = useState(false);
   const [biometricSupport, setBiometricSupport] = useState({
     faceId: false,
     fingerprint: false
@@ -41,11 +36,11 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
   }, []);
 
   const checkBiometricSupport = async () => {
-    // Simulate biometric support check
-    // In a real app, you would use Web Authentication API or Capacitor plugins
+    // Check for Capacitor environment and biometric support
+    const isCapacitor = window.Capacitor?.isNativePlatform();
     const support = {
-      faceId: window.navigator.userAgent.includes('iPhone') || window.navigator.userAgent.includes('iPad'),
-      fingerprint: 'credentials' in navigator
+      faceId: isCapacitor ? true : window.navigator.userAgent.includes('iPhone') || window.navigator.userAgent.includes('iPad'),
+      fingerprint: isCapacitor ? true : 'credentials' in navigator
     };
     setBiometricSupport(support);
   };
@@ -56,7 +51,7 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
 
   const handlePinToggle = (enabled: boolean) => {
     if (enabled && !localStorage.getItem('userPin')) {
-      setShowPinDialog(true);
+      setShowPinSetup(true);
     } else if (!enabled) {
       setPinEnabled(false);
       localStorage.removeItem('userPin');
@@ -71,37 +66,10 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
     }
   };
 
-  const handleSetPin = () => {
-    if (newPin.length !== 6) {
-      toast({
-        title: "Error",
-        description: "PIN harus 6 digit",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (newPin !== confirmPin) {
-      toast({
-        title: "Error",
-        description: "PIN tidak cocok",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Save PIN (in real app, this should be hashed)
-    localStorage.setItem('userPin', newPin);
+  const handlePinSetupComplete = () => {
     setPinEnabled(true);
+    setShowPinSetup(false);
     saveSecuritySettings({ pinEnabled: true, faceIdEnabled, fingerprintEnabled });
-    setShowPinDialog(false);
-    setNewPin('');
-    setConfirmPin('');
-    
-    toast({
-      title: "PIN Berhasil Diatur",
-      description: "PIN keamanan telah diaktifkan",
-    });
   };
 
   const handleFaceIdToggle = async (enabled: boolean) => {
@@ -116,15 +84,28 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
 
     if (enabled) {
       try {
-        // Simulate Face ID authentication
-        const result = await simulateBiometricAuth('Face ID');
-        if (result) {
-          setFaceIdEnabled(true);
-          saveSecuritySettings({ pinEnabled, faceIdEnabled: true, fingerprintEnabled });
-          toast({
-            title: "Face ID Diaktifkan",
-            description: "Face ID berhasil diaktifkan",
-          });
+        // For Capacitor, use native biometric authentication
+        if (window.Capacitor?.isNativePlatform()) {
+          // In real implementation, use @capacitor/biometric-auth
+          const confirmed = await simulateBiometricAuth('Face ID');
+          if (confirmed) {
+            setFaceIdEnabled(true);
+            saveSecuritySettings({ pinEnabled, faceIdEnabled: true, fingerprintEnabled });
+            toast({
+              title: "Face ID Diaktifkan",
+              description: "Face ID berhasil diaktifkan",
+            });
+          }
+        } else {
+          const result = await simulateBiometricAuth('Face ID');
+          if (result) {
+            setFaceIdEnabled(true);
+            saveSecuritySettings({ pinEnabled, faceIdEnabled: true, fingerprintEnabled });
+            toast({
+              title: "Face ID Diaktifkan",
+              description: "Face ID berhasil diaktifkan",
+            });
+          }
         }
       } catch (error) {
         toast({
@@ -155,15 +136,28 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
 
     if (enabled) {
       try {
-        // Simulate fingerprint authentication
-        const result = await simulateBiometricAuth('Fingerprint');
-        if (result) {
-          setFingerprintEnabled(true);
-          saveSecuritySettings({ pinEnabled, faceIdEnabled, fingerprintEnabled: true });
-          toast({
-            title: "Fingerprint Diaktifkan",
-            description: "Fingerprint berhasil diaktifkan",
-          });
+        // For Capacitor, use native biometric authentication
+        if (window.Capacitor?.isNativePlatform()) {
+          // In real implementation, use @capacitor/biometric-auth
+          const confirmed = await simulateBiometricAuth('Fingerprint');
+          if (confirmed) {
+            setFingerprintEnabled(true);
+            saveSecuritySettings({ pinEnabled, faceIdEnabled, fingerprintEnabled: true });
+            toast({
+              title: "Fingerprint Diaktifkan",
+              description: "Fingerprint berhasil diaktifkan",
+            });
+          }
+        } else {
+          const result = await simulateBiometricAuth('Fingerprint');
+          if (result) {
+            setFingerprintEnabled(true);
+            saveSecuritySettings({ pinEnabled, faceIdEnabled, fingerprintEnabled: true });
+            toast({
+              title: "Fingerprint Diaktifkan",
+              description: "Fingerprint berhasil diaktifkan",
+            });
+          }
         }
       } catch (error) {
         toast({
@@ -189,6 +183,15 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
       setTimeout(() => resolve(confirmed), 1000);
     });
   };
+
+  if (showPinSetup) {
+    return (
+      <PinSetupProcess
+        onComplete={handlePinSetupComplete}
+        onBack={() => setShowPinSetup(false)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -282,47 +285,6 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
           </ul>
         </div>
       </div>
-
-      {/* PIN Setup Dialog */}
-      <Dialog open={showPinDialog} onOpenChange={setShowPinDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Atur PIN Keamanan</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="newPin">PIN Baru (6 digit)</Label>
-              <Input
-                id="newPin"
-                type="password"
-                maxLength={6}
-                value={newPin}
-                onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
-                placeholder="000000"
-              />
-            </div>
-            <div>
-              <Label htmlFor="confirmPin">Konfirmasi PIN</Label>
-              <Input
-                id="confirmPin"
-                type="password"
-                maxLength={6}
-                value={confirmPin}
-                onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
-                placeholder="000000"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleSetPin} className="flex-1">
-                Simpan PIN
-              </Button>
-              <Button variant="outline" onClick={() => setShowPinDialog(false)} className="flex-1">
-                Batal
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

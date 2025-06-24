@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -26,7 +27,7 @@ const Index = () => {
   const { groups, createGroup, joinGroup, refreshGroups } = useFamilyGroups();
   const { messages, sendMessage, sendSystemNotification, uploadFile } = useGroupMessages(selectedGroupId);
   const { devices, activities } = useDeviceMonitoring();
-  const { getOnlineUsers, updateMyStatus } = useUserStatus();
+  const { updateMyStatus } = useUserStatus();
   const { members: groupMembers } = useGroupMembers(selectedGroupId);
   const { toast } = useToast();
 
@@ -41,8 +42,6 @@ const Index = () => {
   useEffect(() => {
     updateMyStatus(true, `Menggunakan Good Family - Tab: ${activeTab}`);
   }, [activeTab, updateMyStatus]);
-
-  const onlineUsers = getOnlineUsers();
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
@@ -145,7 +144,6 @@ const Index = () => {
             groups={groups}
             devices={devices}
             activities={activities}
-            onlineUsers={onlineUsers}
           />
         );
       case "groups":
