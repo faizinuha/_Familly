@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { useAuth } from './useAuth';
 
 type FamilyGroup = Tables<'family_groups'>;
-type GroupMember = Tables<'group_members'>;
 
 export function useFamilyGroups() {
   const { user } = useAuth();
@@ -29,14 +28,7 @@ export function useFamilyGroups() {
       const { data, error } = await supabase
         .from('group_members')
         .select(`
-          family_groups (
-            id,
-            name,
-            head_of_family_id,
-            invite_code,
-            created_at,
-            updated_at
-          )
+          family_groups (*)
         `)
         .eq('user_id', user.id);
 
@@ -89,7 +81,6 @@ export function useFamilyGroups() {
 
       if (memberError) throw memberError;
 
-      setGroups((prev) => [...prev, groupData]);
       await fetchGroups(); // Refresh to get updated data
       return groupData;
     } catch (error) {
@@ -133,7 +124,6 @@ export function useFamilyGroups() {
 
       if (memberError) throw memberError;
 
-      setGroups((prev) => [...prev, group]);
       await fetchGroups(); // Refresh to get updated data
       return group;
     } catch (error) {
@@ -173,11 +163,47 @@ export function useFamilyGroups() {
         if (profileError) throw profileError;
       }
 
-      // Update local state
-      setGroups((prev) => prev.filter(g => g.id !== groupId));
       await fetchGroups(); // Refresh to get updated data
     } catch (error) {
       console.error('Error leaving group:', error);
+      throw error;
+    }
+  };
+
+  const deleteGroup = async (groupId: string) => {
+    if (!user) return;
+
+    try {
+      // Only head of family can delete the group
+      const { error: deleteError } = await supabase
+        .from('family_groups')
+        .delete()
+        .eq('id', groupId)
+        .eq('head_of_family_id', user.id);
+
+      if (deleteError) throw deleteError;
+
+      // Check if user is still head of family of any other groups
+      const { data: remainingGroups, error: checkError } = await supabase
+        .from('family_groups')
+        .select('id')
+        .eq('head_of_family_id', user.id);
+
+      if (checkError) throw checkError;
+
+      // If user is not head of family of any groups, reset role to member
+      if (!remainingGroups || remainingGroups.length === 0) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ role: 'member' })
+          .eq('id', user.id);
+
+        if (profileError) throw profileError;
+      }
+
+      await fetchGroups(); // Refresh to get updated data
+    } catch (error) {
+      console.error('Error deleting group:', error);
       throw error;
     }
   };
@@ -188,6 +214,7 @@ export function useFamilyGroups() {
     createGroup,
     joinGroup,
     leaveGroup,
+    deleteGroup,
     refreshGroups: fetchGroups,
   };
 }

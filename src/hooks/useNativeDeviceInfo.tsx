@@ -33,10 +33,8 @@ export function useNativeDeviceInfo() {
             Network.getStatus()
           ]);
 
-          // Use deviceData.identifier if available, otherwise generate a unique ID
-          const deviceId = deviceData.identifier || 
-                          (deviceData.uuid) || 
-                          `${deviceData.platform}-${Date.now()}`;
+          // Generate device ID from available data
+          const deviceId = `${deviceData.platform}-${deviceData.model}-${Date.now()}`;
 
           const info: DeviceInfo = {
             deviceId,
@@ -66,8 +64,15 @@ export function useNativeDeviceInfo() {
           const userAgent = navigator.userAgent;
           const platform = navigator.platform;
           
+          // Generate consistent device ID for web
+          let deviceId = localStorage.getItem('device_id');
+          if (!deviceId) {
+            deviceId = `web-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            localStorage.setItem('device_id', deviceId);
+          }
+          
           const info: DeviceInfo = {
-            deviceId: localStorage.getItem('device_id') || `web-${Date.now()}`,
+            deviceId,
             deviceName: `${platform} Browser`,
             platform: 'web',
             osVersion: userAgent,
@@ -79,11 +84,6 @@ export function useNativeDeviceInfo() {
             isConnected: navigator.onLine
           };
 
-          // Store device ID for future use
-          if (!localStorage.getItem('device_id')) {
-            localStorage.setItem('device_id', info.deviceId);
-          }
-
           setDeviceInfo(info);
         }
       } catch (error) {
@@ -91,7 +91,7 @@ export function useNativeDeviceInfo() {
         
         // Fallback device info
         const fallback: DeviceInfo = {
-          deviceId: 'unknown',
+          deviceId: 'unknown-device',
           deviceName: 'Unknown Device',
           platform: 'unknown',
           osVersion: 'unknown',
