@@ -28,20 +28,20 @@ export function useNativeDeviceInfo() {
       try {
         if (Capacitor.isNativePlatform()) {
           // Native platform - use Capacitor APIs
-          const [deviceInfo, networkStatus] = await Promise.all([
+          const [deviceData, networkStatus] = await Promise.all([
             Device.getInfo(),
             Network.getStatus()
           ]);
 
           const info: DeviceInfo = {
-            deviceId: deviceInfo.identifier,
-            deviceName: deviceInfo.name,
-            platform: deviceInfo.platform,
-            osVersion: deviceInfo.osVersion,
-            manufacturer: deviceInfo.manufacturer,
-            model: deviceInfo.model,
-            isVirtual: deviceInfo.isVirtual,
-            webViewVersion: deviceInfo.webViewVersion,
+            deviceId: deviceData.identifier || `${deviceData.platform}-${Date.now()}`,
+            deviceName: deviceData.name || `${deviceData.platform} Device`,
+            platform: deviceData.platform,
+            osVersion: deviceData.osVersion,
+            manufacturer: deviceData.manufacturer,
+            model: deviceData.model,
+            isVirtual: deviceData.isVirtual,
+            webViewVersion: deviceData.webViewVersion,
             networkType: networkStatus.connectionType,
             isConnected: networkStatus.connected
           };

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { useNativeDeviceInfo } from './useNativeDeviceInfo';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +24,12 @@ export function useEnhancedDeviceMonitoring() {
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null);
+  
+  // Use refs to track channels and intervals
+  const deviceChannelRef = useRef<any>(null);
+  const activityChannelRef = useRef<any>(null);
+  const statusIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const activityIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!user || deviceLoading || !deviceInfo) {
@@ -33,52 +39,78 @@ export function useEnhancedDeviceMonitoring() {
       return;
     }
 
-    registerOrUpdateDevice();
-    fetchDevices();
-    fetchActivities();
+    const initializeMonitoring = async () => {
+      await registerOrUpdateDevice();
+      await fetchDevices();
+      await fetchActivities();
 
-    // Update device status every 30 seconds
-    const statusInterval = setInterval(() => {
-      if (currentDeviceId) {
-        updateDeviceStatus(currentDeviceId, 'online');
+      // Clear existing intervals
+      if (statusIntervalRef.current) {
+        clearInterval(statusIntervalRef.current);
       }
-    }, 30000);
+      if (activityIntervalRef.current) {
+        clearInterval(activityIntervalRef.current);
+      }
 
-    // Log activity every 2 minutes
-    const activityInterval = setInterval(() => {
-      logCurrentActivity();
-    }, 120000);
-
-    // Real-time subscriptions
-    const deviceChannel = supabase
-      .channel('device-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'devices'
-        },
-        () => {
-          fetchDevices();
+      // Update device status every 30 seconds
+      statusIntervalRef.current = setInterval(() => {
+        if (currentDeviceId) {
+          updateDeviceStatus(currentDeviceId, 'online');
         }
-      )
-      .subscribe();
+      }, 30000);
 
-    const activityChannel = supabase
-      .channel('activity-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'activity_logs'
-        },
-        () => {
-          fetchActivities();
-        }
-      )
-      .subscribe();
+      // Log activity every 2 minutes
+      activityIntervalRef.current = setInterval(() => {
+        logCurrentActivity();
+      }, 120000);
+
+      // Setup real-time subscriptions with unique channel names
+      const deviceChannelName = `device-updates-${user.id}-${Date.now()}`;
+      const activityChannelName = `activity-updates-${user.id}-${Date.now()}`;
+
+      // Remove existing channels first
+      if (deviceChannelRef.current) {
+        supabase.removeChannel(deviceChannelRef.current);
+        deviceChannelRef.current = null;
+      }
+      if (activityChannelRef.current) {
+        supabase.removeChannel(activityChannelRef.current);
+        activityChannelRef.current = null;
+      }
+
+      // Create new channels
+      deviceChannelRef.current = supabase
+        .channel(deviceChannelName)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'devices'
+          },
+          () => {
+            fetchDevices();
+          }
+        )
+        .subscribe();
+
+      activityChannelRef.current = supabase
+        .channel(activityChannelName)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'activity_logs'
+          },
+          () => {
+            fetchActivities();
+          }
+        )
+        .subscribe();
+    };
+
+    initializeMonitoring();
 
     // Cleanup on page unload
     const handleBeforeUnload = () => {
@@ -90,18 +122,30 @@ export function useEnhancedDeviceMonitoring() {
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      clearInterval(statusInterval);
-      clearInterval(activityInterval);
+      // Clear intervals
+      if (statusIntervalRef.current) {
+        clearInterval(statusIntervalRef.current);
+      }
+      if (activityIntervalRef.current) {
+        clearInterval(activityIntervalRef.current);
+      }
+      
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      supabase.removeChannel(deviceChannel);
-      supabase.removeChannel(activityChannel);
+      
+      // Remove channels
+      if (deviceChannelRef.current) {
+        supabase.removeChannel(deviceChannelRef.current);
+      }
+      if (activityChannelRef.current) {
+        supabase.removeChannel(activityChannelRef.current);
+      }
       
       // Set device offline when component unmounts
       if (currentDeviceId) {
         updateDeviceStatus(currentDeviceId, 'offline');
       }
     };
-  }, [user, deviceInfo, deviceLoading, currentDeviceId]);
+  }, [user, deviceInfo, deviceLoading]);
 
   const registerOrUpdateDevice = async () => {
     if (!user || !deviceInfo) return;
