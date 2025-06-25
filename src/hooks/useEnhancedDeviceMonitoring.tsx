@@ -167,13 +167,7 @@ export function useEnhancedDeviceMonitoring() {
         .order('last_seen', { ascending: false });
 
       if (error) throw error;
-      
-      const mappedDevices = (data || []).map(device => ({
-        ...device,
-        profile: device.profiles ? { full_name: device.profiles.full_name } : undefined
-      })) as Device[];
-      
-      setDevices(mappedDevices);
+      setDevices(data || []);
     } catch (error) {
       console.error('Error fetching devices:', error);
       setDevices([]);
@@ -194,13 +188,7 @@ export function useEnhancedDeviceMonitoring() {
         .limit(50);
 
       if (error) throw error;
-      
-      const mappedActivities = (data || []).map(activity => ({
-        ...activity,
-        profile: activity.profiles ? { full_name: activity.profiles.full_name } : undefined
-      })) as ActivityLog[];
-      
-      setActivities(mappedActivities);
+      setActivities(data || []);
     } catch (error) {
       console.error('Error fetching activities:', error);
       setActivities([]);

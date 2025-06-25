@@ -134,7 +134,7 @@ const EnhancedMonitoringView: React.FC = () => {
                     <div>
                       <p className="font-medium">{device.device_name}</p>
                       <p className="text-sm text-gray-600">
-                        {device.profile?.full_name || 'Unknown User'} • {device.device_type}
+                        {device.profiles?.full_name || 'Unknown User'} • {device.device_type}
                       </p>
                       {device.current_app && (
                         <p className="text-xs text-gray-500">Menggunakan: {device.current_app}</p>
@@ -172,10 +172,10 @@ const EnhancedMonitoringView: React.FC = () => {
             activities.slice(0, 10).map((activity) => (
               <div key={activity.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
-                  {activity.profile?.full_name?.[0]?.toUpperCase() || '?'}
+                  {activity.profiles?.full_name?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">{activity.profile?.full_name || 'Unknown User'}</p>
+                  <p className="text-sm font-medium">{activity.profiles?.full_name || 'Unknown User'}</p>
                   <p className="text-sm text-gray-600">{activity.app_name} - {activity.activity_type}</p>
                   {activity.duration_minutes && (
                     <p className="text-xs text-gray-500">Durasi: {activity.duration_minutes} menit</p>

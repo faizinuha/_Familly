@@ -156,8 +156,6 @@ const Index = () => {
             user={user}
             isHeadOfFamily={isHeadOfFamily}
             groups={groups}
-            devices={devices}
-            activities={activities}
           />
         );
       case "groups":

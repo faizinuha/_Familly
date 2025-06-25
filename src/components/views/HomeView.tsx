@@ -79,10 +79,10 @@ const HomeView: React.FC<HomeViewProps> = ({
             activities.slice(0, 5).map((activity: any, index: number) => (
               <div key={activity.id || index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
-                  {activity.profile?.full_name?.[0]?.toUpperCase() || activity.user_id?.slice(0, 1)?.toUpperCase() || '?'}
+                  {activity.profiles?.full_name?.[0]?.toUpperCase() || activity.user_id?.slice(0, 1)?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">{activity.profile?.full_name || 'Pengguna'}</p>
+                  <p className="text-sm font-medium">{activity.profiles?.full_name || 'Pengguna'}</p>
                   <p className="text-sm text-gray-600">Menggunakan {activity.app_name}</p>
                   <p className="text-xs text-gray-400 flex items-center gap-1">
                     <span>🕐</span>
