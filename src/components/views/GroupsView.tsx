@@ -20,6 +20,7 @@ interface GroupsViewProps {
   onJoinGroup: () => void;
   onDeleteGroup: (groupId: string) => void;
   onSelectGroup: (groupId: string) => void;
+  onLeaveGroup: (groupId: string) => void;
 }
 
 const GroupsView: React.FC<GroupsViewProps> = ({
@@ -33,25 +34,9 @@ const GroupsView: React.FC<GroupsViewProps> = ({
   onCreateGroup,
   onJoinGroup,
   onDeleteGroup,
-  onSelectGroup
+  onSelectGroup,
+  onLeaveGroup
 }) => {
-  const handleLeaveGroup = async (groupId: string) => {
-    if (!window.confirm("Yakin ingin keluar dari grup ini?")) return;
-    try {
-      const { supabase } = await import("@/integrations/supabase/client");
-      const { error } = await supabase
-        .from("group_members")
-        .delete()
-        .eq("group_id", groupId)
-        .eq("user_id", user?.id);
-      
-      if (error) throw error;
-      window.location.reload(); // Refresh untuk update data
-    } catch (error) {
-      console.error("Error leaving group:", error);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -158,10 +143,10 @@ const GroupsView: React.FC<GroupsViewProps> = ({
                     {groupMembers && groupMembers.filter(m => m.group_id === group.id).map((member) => (
                       <div key={member.user_id} className="flex flex-col items-center">
                         <div className="h-7 w-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-blue-700">
-                          {member.profile?.full_name?.[0]?.toUpperCase() || "?"}
+                          {member.profiles?.full_name?.[0]?.toUpperCase() || "?"}
                         </div>
                         <span className="text-[10px] mt-1 text-gray-500 max-w-[40px] truncate">
-                          {member.profile?.full_name?.split(" ")[0]}
+                          {member.profiles?.full_name?.split(" ")[0]}
                         </span>
                       </div>
                     ))}
@@ -189,7 +174,7 @@ const GroupsView: React.FC<GroupsViewProps> = ({
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => handleLeaveGroup(group.id)}
+                        onClick={() => onLeaveGroup(group.id)}
                         className="flex-1 text-red-600 hover:text-red-700"
                       >
                         <LogOut className="h-4 w-4 mr-2" />

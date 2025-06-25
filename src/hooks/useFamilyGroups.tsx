@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { useEffect, useState } from 'react';
@@ -21,18 +22,29 @@ export function useFamilyGroups() {
     fetchGroups();
   }, [user]);
 
-  // Update: fetch only groups where user is a member
   const fetchGroups = async () => {
+    if (!user) return;
+    
     try {
       const { data, error } = await supabase
         .from('group_members')
-        .select('family_groups(*)')
+        .select(`
+          family_groups (
+            id,
+            name,
+            head_of_family_id,
+            invite_code,
+            created_at,
+            updated_at
+          )
+        `)
         .eq('user_id', user.id);
 
       if (error) throw error;
+      
       // Extract family_groups from group_members
       const groupsData = (data || [])
-        .map((gm: { family_groups: FamilyGroup }) => gm.family_groups)
+        .map((gm: any) => gm.family_groups)
         .filter(Boolean);
       setGroups(groupsData);
     } catch (error) {
@@ -46,8 +58,8 @@ export function useFamilyGroups() {
     if (!user) return null;
 
     try {
-      // Don't provide invite_code - let the trigger generate it
-      const { data, error } = await supabase
+      // Create the group first
+      const { data: groupData, error: groupError } = await supabase
         .from('family_groups')
         .insert({
           name,
@@ -57,22 +69,29 @@ export function useFamilyGroups() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (groupError) throw groupError;
 
       // Update profile role to head_of_family
-      await supabase
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({ role: 'head_of_family' })
         .eq('id', user.id);
 
-      // Insert user as member of the group (head of family is also a member)
-      await supabase.from('group_members').insert({
-        group_id: data.id,
-        user_id: user.id,
-      });
+      if (profileError) throw profileError;
 
-      setGroups((prev) => [...prev, data]);
-      return data;
+      // Insert user as member of the group
+      const { error: memberError } = await supabase
+        .from('group_members')
+        .insert({
+          group_id: groupData.id,
+          user_id: user.id,
+        });
+
+      if (memberError) throw memberError;
+
+      setGroups((prev) => [...prev, groupData]);
+      await fetchGroups(); // Refresh to get updated data
+      return groupData;
     } catch (error) {
       console.error('Error creating group:', error);
       throw error;
@@ -87,8 +106,7 @@ export function useFamilyGroups() {
       const { data: group, error: groupError } = await supabase
         .from('family_groups')
         .select('*')
-        .eq('invite_code', inviteCode.trim()) // Jangan ubah case 
-        // ganti ke trim karena kode awal adalah ToUpperCase
+        .eq('invite_code', inviteCode.trim())
         .single();
 
       if (groupError) throw new Error('Kode undangan tidak valid');
@@ -116,9 +134,50 @@ export function useFamilyGroups() {
       if (memberError) throw memberError;
 
       setGroups((prev) => [...prev, group]);
+      await fetchGroups(); // Refresh to get updated data
       return group;
     } catch (error) {
       console.error('Error joining group:', error);
+      throw error;
+    }
+  };
+
+  const leaveGroup = async (groupId: string) => {
+    if (!user) return;
+
+    try {
+      // Remove user from group
+      const { error: memberError } = await supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', user.id);
+
+      if (memberError) throw memberError;
+
+      // Check if user is still head of family of any other groups
+      const { data: remainingGroups, error: checkError } = await supabase
+        .from('family_groups')
+        .select('id')
+        .eq('head_of_family_id', user.id);
+
+      if (checkError) throw checkError;
+
+      // If user is not head of family of any groups, reset role to member
+      if (!remainingGroups || remainingGroups.length === 0) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ role: 'member' })
+          .eq('id', user.id);
+
+        if (profileError) throw profileError;
+      }
+
+      // Update local state
+      setGroups((prev) => prev.filter(g => g.id !== groupId));
+      await fetchGroups(); // Refresh to get updated data
+    } catch (error) {
+      console.error('Error leaving group:', error);
       throw error;
     }
   };
@@ -128,6 +187,7 @@ export function useFamilyGroups() {
     loading,
     createGroup,
     joinGroup,
+    leaveGroup,
     refreshGroups: fetchGroups,
   };
 }

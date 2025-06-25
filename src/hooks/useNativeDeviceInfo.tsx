@@ -33,8 +33,13 @@ export function useNativeDeviceInfo() {
             Network.getStatus()
           ]);
 
+          // Use deviceData.identifier if available, otherwise generate a unique ID
+          const deviceId = deviceData.identifier || 
+                          (deviceData.uuid) || 
+                          `${deviceData.platform}-${Date.now()}`;
+
           const info: DeviceInfo = {
-            deviceId: deviceData.identifier || `${deviceData.platform}-${Date.now()}`,
+            deviceId,
             deviceName: deviceData.name || `${deviceData.platform} Device`,
             platform: deviceData.platform,
             osVersion: deviceData.osVersion,
