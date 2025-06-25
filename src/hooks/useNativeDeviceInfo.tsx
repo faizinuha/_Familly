@@ -80,7 +80,7 @@ export function useNativeDeviceInfo() {
             model: getBrowserName(),
             isVirtual: false,
             webViewVersion: 'N/A',
-            networkType: (navigator as any).connection?.effectiveType || 'unknown',
+            networkType: (navigator as Navigator & { connection?: { effectiveType?: string } }).connection?.effectiveType || 'unknown',
             isConnected: navigator.onLine
           };
 
