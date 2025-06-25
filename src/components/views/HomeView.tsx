@@ -1,28 +1,26 @@
 
 import React from 'react';
-import { Users, Monitor, Bell, Smartphone } from "lucide-react";
+import { Users, Monitor, Bell } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useEnhancedDeviceMonitoring } from "@/hooks/useEnhancedDeviceMonitoring";
 
 interface HomeViewProps {
   profile: any;
   user: any;
   isHeadOfFamily: boolean;
   groups: any[];
+  devices: any[];
+  activities: any[];
 }
 
 const HomeView: React.FC<HomeViewProps> = ({
   profile,
   user,
   isHeadOfFamily,
-  groups
+  groups,
+  devices,
+  activities
 }) => {
-  const { getOnlineDevices, activities, getCurrentUserDevices } = useEnhancedDeviceMonitoring();
-  
-  const onlineDevices = getOnlineDevices();
-  const currentUserDevices = getCurrentUserDevices();
-
   return (
     <div className="space-y-6 pb-4">
       {/* Header Welcome */}
@@ -35,7 +33,7 @@ const HomeView: React.FC<HomeViewProps> = ({
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
             <Users className="h-8 w-8 text-blue-500 mx-auto mb-2" />
@@ -46,17 +44,8 @@ const HomeView: React.FC<HomeViewProps> = ({
         <Card>
           <CardContent className="p-4 text-center">
             <Monitor className="h-8 w-8 text-green-500 mx-auto mb-2" />
-            <div className="text-2xl font-bold">{onlineDevices.length}</div>
+            <div className="text-2xl font-bold">{devices.filter(d => d.status === 'online').length}</div>
             <div className="text-sm text-gray-600">Device Online</div>
-            <div className="text-xs text-gray-500 mt-1">Semua keluarga</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <Smartphone className="h-8 w-8 text-purple-500 mx-auto mb-2" />
-            <div className="text-2xl font-bold">{currentUserDevices.length}</div>
-            <div className="text-sm text-gray-600">Perangkat Saya</div>
-            <div className="text-xs text-gray-500 mt-1">Milik Anda</div>
           </CardContent>
         </Card>
         <Card>
@@ -67,24 +56,6 @@ const HomeView: React.FC<HomeViewProps> = ({
           </CardContent>
         </Card>
       </div>
-
-      {/* Info Card explaining the difference */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-white text-xs font-bold">i</span>
-            </div>
-            <div>
-              <h4 className="font-medium text-blue-900 mb-1">Perbedaan Device Online & Perangkat Saya</h4>
-              <p className="text-sm text-blue-700">
-                <strong>Device Online:</strong> Total semua perangkat keluarga yang sedang aktif/online<br/>
-                <strong>Perangkat Saya:</strong> Hanya perangkat yang terdaftar atas nama Anda
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Recent Activities */}
       <Card>
@@ -97,12 +68,12 @@ const HomeView: React.FC<HomeViewProps> = ({
         <CardContent className="space-y-3">
           {activities.length > 0 ? (
             activities.slice(0, 5).map((activity: any, index: number) => (
-              <div key={activity.id || index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+              <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
-                  {activity.profiles?.full_name?.[0]?.toUpperCase() || activity.user_id?.slice(0, 1)?.toUpperCase() || '?'}
+                  {activity.profile?.full_name?.[0]?.toUpperCase() || activity.user_id?.slice(0, 1)?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">{activity.profiles?.full_name || 'Pengguna'}</p>
+                  <p className="text-sm font-medium">{activity.profile?.full_name || 'Pengguna'}</p>
                   <p className="text-sm text-gray-600">Menggunakan {activity.app_name}</p>
                   <p className="text-xs text-gray-400 flex items-center gap-1">
                     <span>🕐</span>
