@@ -1,38 +1,40 @@
-
-import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
-import { useFamilyGroups } from "@/hooks/useFamilyGroups";
-import { useGroupMessages } from "@/hooks/useGroupMessages";
-import { useDeviceMonitoring } from "@/hooks/useDeviceMonitoring";
-import { useUserStatus } from "@/hooks/useUserStatus";
-import { useToast } from "@/hooks/use-toast";
-import { useGroupMembers } from "@/hooks/useGroupMembers";
-import { usePinAuth } from "@/hooks/usePinAuth";
-import Header from "@/components/Header";
-import Navigation from "@/components/Navigation";
-import HomeView from "@/components/views/HomeView";
-import GroupsView from "@/components/views/GroupsView";
-import MonitoringView from "@/components/views/MonitoringView";
-import ChatView from "@/components/views/ChatView";
-import SettingsView from "@/components/views/SettingsView";
-import PinAuthScreen from "@/components/PinAuthScreen";
+import Header from '@/components/Header';
+import Navigation from '@/components/Navigation';
+import PinAuthScreen from '@/components/PinAuthScreen';
+import ChatView from '@/components/views/ChatView';
+import GroupsView from '@/components/views/GroupsView';
+import HomeView from '@/components/views/HomeView';
+import MonitoringView from '@/components/views/MonitoringView';
+import SettingsView from '@/components/views/SettingsView';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useDeviceMonitoring } from '@/hooks/useDeviceMonitoring';
+import { useFamilyGroups } from '@/hooks/useFamilyGroups';
+import { useGroupMembers } from '@/hooks/useGroupMembers';
+import { useGroupMessages } from '@/hooks/useGroupMessages';
+import { usePinAuth } from '@/hooks/usePinAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { useUserStatus } from '@/hooks/useUserStatus';
+import { useEffect, useState } from 'react';
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("home");
+  const [activeTab, setActiveTab] = useState('home');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [newGroupName, setNewGroupName] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
-  
+  const [newGroupName, setNewGroupName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+
   const { user, signOut } = useAuth();
   const { profile, isHeadOfFamily } = useProfile();
-  const { groups, createGroup, joinGroup, leaveGroup, refreshGroups } = useFamilyGroups();
-  const { messages, sendMessage, sendSystemNotification, uploadFile } = useGroupMessages(selectedGroupId);
+  const { groups, createGroup, joinGroup, leaveGroup, refreshGroups } =
+    useFamilyGroups();
+  const { messages, sendMessage, sendSystemNotification, uploadFile } =
+    useGroupMessages(selectedGroupId);
   const { devices, activities } = useDeviceMonitoring();
   const { updateMyStatus } = useUserStatus();
   const { members: groupMembers } = useGroupMembers(selectedGroupId);
   const { toast } = useToast();
-  const { isAuthenticated, pinEnabled, authenticate, requireAuth } = usePinAuth();
+  const { isAuthenticated, pinEnabled, authenticate, requireAuth } =
+    usePinAuth();
 
   // Auto-select first group
   useEffect(() => {
@@ -60,79 +62,84 @@ const Index = () => {
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
-    
+
     try {
       const group = await createGroup(newGroupName);
       if (group) {
         toast({
-          title: "Berhasil!",
+          title: 'Berhasil!',
           description: `Grup "${newGroupName}" berhasil dibuat`,
         });
-        setNewGroupName("");
+        setNewGroupName('');
         setSelectedGroupId(group.id);
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Gagal membuat grup",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Gagal membuat grup',
+        variant: 'destructive',
       });
     }
   };
 
   const handleJoinGroup = async () => {
     if (!inviteCode.trim()) return;
-    
+
     try {
       const group = await joinGroup(inviteCode);
       if (group) {
         toast({
-          title: "Berhasil!",
+          title: 'Berhasil!',
           description: `Berhasil bergabung dengan grup "${group.name}"`,
         });
-        setInviteCode("");
+        setInviteCode('');
         setSelectedGroupId(group.id);
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: (error as Error).message || "Gagal bergabung ke grup",
-        variant: "destructive"
+        title: 'Error',
+        description: (error as Error).message || 'Gagal bergabung ke grup',
+        variant: 'destructive',
       });
     }
   };
 
   const handleLeaveGroup = async (groupId: string) => {
-    if (!window.confirm("Yakin ingin keluar dari grup ini?")) return;
-    
+    if (!window.confirm('Yakin ingin keluar dari grup ini?')) return;
+
     try {
       await leaveGroup(groupId);
       toast({
-        title: "Berhasil!",
-        description: "Berhasil keluar dari grup",
+        title: 'Berhasil!',
+        description: 'Berhasil keluar dari grup',
       });
-      
+
       // If this was the selected group, clear the selection
       if (selectedGroupId === groupId) {
         setSelectedGroupId(null);
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Gagal keluar dari grup",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Gagal keluar dari grup',
+        variant: 'destructive',
       });
     }
   };
 
-  const handleSendMessage = async (message: string, fileUrl?: string, fileType?: string, fileName?: string) => {
+  const handleSendMessage = async (
+    message: string,
+    fileUrl?: string,
+    fileType?: string,
+    fileName?: string
+  ) => {
     try {
       await sendMessage(message, [], fileUrl, fileType, fileName);
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Gagal mengirim pesan",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Gagal mengirim pesan',
+        variant: 'destructive',
       });
       throw error;
     }
@@ -142,38 +149,43 @@ const Index = () => {
     try {
       await sendSystemNotification(message);
       toast({
-        title: "Notifikasi terkirim",
+        title: 'Notifikasi terkirim',
         description: message,
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Gagal mengirim notifikasi",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Gagal mengirim notifikasi',
+        variant: 'destructive',
       });
     }
   };
 
   const handleDeleteGroup = async (groupId: string) => {
-    if (!window.confirm("Yakin ingin menghapus grup ini?")) return;
+    if (!window.confirm('Yakin ingin menghapus grup ini?')) return;
     try {
-      const { error } = await import("@/integrations/supabase/client").then(({ supabase }) =>
-        supabase.from("family_groups").delete().eq("id", groupId)
+      const { error } = await import('@/integrations/supabase/client').then(
+        ({ supabase }) =>
+          supabase.from('family_groups').delete().eq('id', groupId)
       );
       if (error) throw error;
-      toast({ title: "Grup dihapus", description: "Grup berhasil dihapus" });
+      toast({ title: 'Grup dihapus', description: 'Grup berhasil dihapus' });
       refreshGroups();
       setSelectedGroupId(null);
     } catch (error) {
-      toast({ title: "Error", description: "Gagal menghapus grup", variant: "destructive" });
+      toast({
+        title: 'Error',
+        description: 'Gagal menghapus grup',
+        variant: 'destructive',
+      });
     }
   };
 
-  const selectedGroup = groups.find(g => g.id === selectedGroupId);
+  const selectedGroup = groups.find((g) => g.id === selectedGroupId);
 
   const renderContent = () => {
     switch (activeTab) {
-      case "home":
+      case 'home':
         return (
           <HomeView
             profile={profile}
@@ -182,7 +194,7 @@ const Index = () => {
             groups={groups}
           />
         );
-      case "groups":
+      case 'groups':
         return (
           <GroupsView
             groups={groups}
@@ -199,7 +211,7 @@ const Index = () => {
             onLeaveGroup={handleLeaveGroup}
           />
         );
-      case "monitoring":
+      case 'monitoring':
         return (
           <MonitoringView
             devices={devices}
@@ -207,17 +219,15 @@ const Index = () => {
             onSendNotification={handleSendNotification}
           />
         );
-      case "chat":
+      case 'chat':
         return (
           <ChatView
-            selectedGroup={selectedGroup}
-            messages={messages}
-            user={user}
-            onSendMessage={handleSendMessage}
-            onUploadFile={uploadFile}
+            groups={groups}
+            selectedGroupId={selectedGroupId}
+            onSelectGroup={setSelectedGroupId}
           />
         );
-      case "settings":
+      case 'settings':
         return <SettingsView />;
       default:
         return null;
@@ -232,10 +242,18 @@ const Index = () => {
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       <Header />
-      
+
       <div className="flex-1 overflow-hidden">
-        <div className={`h-full ${activeTab === 'chat' ? 'flex flex-col' : ''}`}>
-          <div className={`max-w-md mx-auto h-full ${activeTab === 'chat' ? 'flex flex-col' : 'overflow-y-auto px-4 py-6'}`}>
+        <div
+          className={`h-full ${activeTab === 'chat' ? 'flex flex-col' : ''}`}
+        >
+          <div
+            className={`max-w-md mx-auto h-full ${
+              activeTab === 'chat'
+                ? 'flex flex-col'
+                : 'overflow-y-auto px-4 py-6'
+            }`}
+          >
             {renderContent()}
           </div>
         </div>
