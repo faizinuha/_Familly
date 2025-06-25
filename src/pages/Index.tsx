@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -25,7 +26,7 @@ const Index = () => {
   
   const { user, signOut } = useAuth();
   const { profile, isHeadOfFamily } = useProfile();
-  const { groups, createGroup, joinGroup, refreshGroups } = useFamilyGroups();
+  const { groups, createGroup, joinGroup, leaveGroup, refreshGroups } = useFamilyGroups();
   const { messages, sendMessage, sendSystemNotification, uploadFile } = useGroupMessages(selectedGroupId);
   const { devices, activities } = useDeviceMonitoring();
   const { updateMyStatus } = useUserStatus();
@@ -101,6 +102,29 @@ const Index = () => {
     }
   };
 
+  const handleLeaveGroup = async (groupId: string) => {
+    if (!window.confirm("Yakin ingin keluar dari grup ini?")) return;
+    
+    try {
+      await leaveGroup(groupId);
+      toast({
+        title: "Berhasil!",
+        description: "Berhasil keluar dari grup",
+      });
+      
+      // If this was the selected group, clear the selection
+      if (selectedGroupId === groupId) {
+        setSelectedGroupId(null);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal keluar dari grup",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleSendMessage = async (message: string, fileUrl?: string, fileType?: string, fileName?: string) => {
     try {
       await sendMessage(message, [], fileUrl, fileType, fileName);
@@ -156,8 +180,6 @@ const Index = () => {
             user={user}
             isHeadOfFamily={isHeadOfFamily}
             groups={groups}
-            devices={devices}
-            activities={activities}
           />
         );
       case "groups":
@@ -174,6 +196,7 @@ const Index = () => {
             onJoinGroup={handleJoinGroup}
             onDeleteGroup={handleDeleteGroup}
             onSelectGroup={setSelectedGroupId}
+            onLeaveGroup={handleLeaveGroup}
           />
         );
       case "monitoring":
