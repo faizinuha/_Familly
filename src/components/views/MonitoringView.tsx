@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { Smartphone, Bell, Wifi } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Smartphone, Wifi } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import NotificationDialog from "@/components/NotificationDialog";
 
 interface MonitoringViewProps {
   devices: any[];
@@ -33,7 +33,7 @@ const MonitoringView: React.FC<MonitoringViewProps> = ({
               <CardTitle className="flex items-center justify-between text-lg">
                 <div className="flex items-center gap-2">
                   <Smartphone className="h-5 w-5" />
-                  {device.profile?.full_name || 'Unknown User'}
+                  {device.profiles?.full_name || 'Unknown User'}
                 </div>
                 <div className={`w-3 h-3 rounded-full ${device.status === 'online' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
               </CardTitle>
@@ -65,14 +65,11 @@ const MonitoringView: React.FC<MonitoringViewProps> = ({
               </div>
               <div className="flex gap-2 mt-4">
                 {isHeadOfFamily && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => onSendNotification(`${device.profile?.full_name || 'Unknown User'}, mohon perhatikan penggunaan device!`)}
-                  >
-                    <Bell className="h-4 w-4 mr-1" />
-                    Kirim Notifikasi
-                  </Button>
+                  <NotificationDialog
+                    deviceName={device.device_name}
+                    userName={device.profiles?.full_name || 'Unknown User'}
+                    userEmail={device.profiles?.email}
+                  />
                 )}
               </div>
             </CardContent>

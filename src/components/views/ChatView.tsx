@@ -2,13 +2,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Users, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useGroupMessages } from "@/hooks/useGroupMessages";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
 import { useAuth } from "@/hooks/useAuth";
+import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import ChatMessage from "@/components/ChatMessage";
 import ChatInput from "@/components/ChatInput";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +19,27 @@ interface ChatViewProps {
   onSelectGroup: (groupId: string | null) => void;
 }
 
+const TypingIndicator: React.FC<{ typingUsers: { [key: string]: string } }> = ({ typingUsers }) => {
+  const typingUserNames = Object.values(typingUsers);
+  
+  if (typingUserNames.length === 0) return null;
+
+  const displayText = typingUserNames.length === 1 
+    ? `${typingUserNames[0]} sedang mengetik...`
+    : `${typingUserNames.slice(0, 2).join(', ')}${typingUserNames.length > 2 ? ` dan ${typingUserNames.length - 2} lainnya` : ''} sedang mengetik...`;
+
+  return (
+    <div className="flex items-center gap-2 px-4 py-2 text-sm text-gray-500 bg-gray-50">
+      <div className="flex space-x-1">
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+      </div>
+      <span>{displayText}</span>
+    </div>
+  );
+};
+
 export default function ChatView({ groups, selectedGroupId, onSelectGroup }: ChatViewProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -26,6 +47,7 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
   
   const { messages, loading: messagesLoading, sendMessage, uploadFile } = useGroupMessages(selectedGroupId);
   const { members, loading: membersLoading } = useGroupMembers(selectedGroupId);
+  const { typingUsers, startTyping, stopTyping } = useTypingIndicator(selectedGroupId);
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
@@ -35,10 +57,11 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
         scrollElement.scrollTop = scrollElement.scrollHeight;
       }
     }
-  }, [messages]);
+  }, [messages, typingUsers]);
 
   const handleSendMessage = async (message: string, fileUrl?: string, fileType?: string, fileName?: string) => {
     try {
+      stopTyping();
       await sendMessage(message, [], fileUrl, fileType, fileName);
     } catch (error) {
       console.error('Error sending message:', error);
@@ -65,14 +88,28 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
   };
 
   const handleBackClick = () => {
+    console.log('Back button clicked, selectedGroupId:', selectedGroupId);
+    console.log('Available groups:', groups);
+    
     try {
-      console.log('Back button clicked, returning to group list');
       onSelectGroup(null);
+      console.log('Successfully called onSelectGroup(null)');
     } catch (error) {
       console.error('Error in handleBackClick:', error);
-      // Fallback - still try to go back
-      onSelectGroup(null);
+      // Force refresh or fallback
+      window.location.reload();
     }
+  };
+
+  const handleInputTyping = () => {
+    if (user?.id) {
+      const currentUser = members?.find(m => m.user_id === user.id);
+      startTyping(currentUser?.profiles?.full_name || 'Unknown User');
+    }
+  };
+
+  const handleInputStop = () => {
+    stopTyping();
   };
 
   if (!selectedGroupId) {
@@ -121,23 +158,24 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
   if (!selectedGroup) {
     console.error('Selected group not found:', selectedGroupId);
     return (
-      <div className="flex flex-col h-full">
-        <div className="flex items-center gap-3 p-4 border-b bg-white">
+      <div className="flex flex-col h-full bg-white">
+        <div className="flex items-center gap-3 p-4 border-b">
           <Button
             variant="ghost"
             size="sm"
             onClick={handleBackClick}
+            className="hover:bg-gray-100"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
-            <h3 className="font-medium">Grup tidak ditemukan</h3>
+            <h3 className="font-medium text-red-600">Grup tidak ditemukan</h3>
           </div>
         </div>
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-center">
             <p className="text-gray-500 mb-4">Grup yang dipilih tidak tersedia</p>
-            <Button onClick={handleBackClick}>
+            <Button onClick={handleBackClick} variant="outline">
               Kembali ke Daftar Grup
             </Button>
           </div>
@@ -147,13 +185,14 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b bg-white">
+      <div className="flex items-center gap-3 p-4 border-b bg-white sticky top-0 z-10">
         <Button
           variant="ghost"
           size="sm"
           onClick={handleBackClick}
+          className="hover:bg-gray-100"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -197,11 +236,16 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
         </div>
       </ScrollArea>
 
+      {/* Typing Indicator */}
+      <TypingIndicator typingUsers={typingUsers} />
+
       {/* Input Area */}
       <div className="border-t bg-white">
         <ChatInput
           onSendMessage={handleSendMessage}
           onUploadFile={handleUploadFile}
+          onTyping={handleInputTyping}
+          onStopTyping={handleInputStop}
           disabled={messagesLoading}
         />
       </div>
