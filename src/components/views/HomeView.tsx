@@ -117,46 +117,60 @@ const HomeView: React.FC<HomeViewProps> = ({
         </CardContent>
       </Card>
 
-      {/* Modern Activities Section */}
+      {/* Compact Activities Section */}
       <Card className="shadow-lg border-0 bg-white">
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-100 rounded-t-lg">
-          <CardTitle className="flex items-center gap-3 text-gray-800">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
-              <Activity className="h-5 w-5 text-white" />
+        <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-100 rounded-t-lg pb-4">
+          <CardTitle className="flex items-center justify-between text-gray-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
+                <Activity className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-xl">Aktivitas Terbaru</span>
             </div>
-            <span className="text-xl">Aktivitas Terbaru</span>
+            <Badge variant="secondary" className="text-xs">
+              {activities.length} aktivitas
+            </Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          <div className="space-y-4">
+        <CardContent className="p-4">
+          <div className="space-y-3">
             {activities.length > 0 ? (
-              activities.slice(0, 5).map((activity: any, index: number) => (
-                <div key={activity.id || index} className="flex items-start gap-4 p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border border-gray-100 hover:shadow-md transition-all duration-200">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-lg flex-shrink-0">
+              activities.slice(0, 3).map((activity: any, index: number) => (
+                <div key={activity.id || index} className="flex items-center gap-3 p-3 bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg border border-gray-100 hover:shadow-md transition-all duration-200">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-xs shadow-md flex-shrink-0">
                     {activity.profiles?.full_name?.[0]?.toUpperCase() || activity.user_id?.slice(0, 1)?.toUpperCase() || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 mb-1">{activity.profiles?.full_name || 'Pengguna'}</p>
-                    <p className="text-sm text-gray-600 mb-2">Menggunakan {activity.app_name}</p>
-                    <p className="text-xs text-gray-500 flex items-center gap-2">
-                      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                      {new Date(activity.timestamp || '').toLocaleString('id-ID', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium text-gray-900 text-sm truncate">{activity.profiles?.full_name || 'Pengguna'}</p>
+                      <p className="text-xs text-gray-500 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                        {new Date(activity.timestamp || '').toLocaleString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">Menggunakan {activity.app_name}</p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Activity className="h-8 w-8 text-gray-400" />
+              <div className="text-center py-8">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Activity className="h-6 w-6 text-gray-400" />
                 </div>
-                <p className="text-gray-500 font-medium">Belum ada aktivitas</p>
-                <p className="text-sm text-gray-400 mt-1">Aktivitas keluarga akan muncul di sini</p>
+                <p className="text-gray-500 font-medium text-sm">Belum ada aktivitas</p>
+                <p className="text-xs text-gray-400 mt-1">Aktivitas keluarga akan muncul di sini</p>
+              </div>
+            )}
+            {activities.length > 3 && (
+              <div className="text-center pt-2">
+                <Badge variant="outline" className="text-xs cursor-pointer hover:bg-gray-50">
+                  +{activities.length - 3} aktivitas lainnya
+                </Badge>
               </div>
             )}
           </div>

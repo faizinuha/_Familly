@@ -78,38 +78,51 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
   if (!selectedGroupId) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-bold">Chat Keluarga</h2>
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-2xl shadow-xl">
+          <h2 className="text-2xl font-bold mb-2">Chat Keluarga</h2>
+          <p className="opacity-90">Pilih grup untuk memulai percakapan</p>
+        </div>
         <div className="grid gap-4">
           {groups.map((group) => (
             <Card 
               key={group.id} 
-              className="cursor-pointer hover:bg-gray-50 transition-colors"
+              className="cursor-pointer hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 hover:shadow-lg hover:scale-105 border-2 hover:border-blue-200"
               onClick={() => onSelectGroup(group.id)}
             >
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-blue-700 font-bold">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-lg">
+                      <span className="text-white font-bold text-lg">
                         {group.name?.[0]?.toUpperCase() || 'G'}
                       </span>
                     </div>
                     <div>
-                      <div className="font-medium">{group.name || 'Unnamed Group'}</div>
-                      <div className="text-sm text-gray-500">
-                        Tap untuk mulai chat
+                      <div className="font-medium text-lg">{group.name || 'Unnamed Group'}</div>
+                      <div className="text-sm text-gray-500 flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        <span>Tap untuk mulai chat</span>
                       </div>
                     </div>
                   </div>
-                  <Users className="h-5 w-5 text-gray-400" />
+                  <div className="flex flex-col items-center">
+                    <Users className="h-6 w-6 text-blue-500 mb-1" />
+                    <Badge variant="secondary" className="text-xs">
+                      Chat
+                    </Badge>
+                  </div>
                 </CardTitle>
               </CardHeader>
             </Card>
           ))}
         </div>
         {groups.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-gray-500">Belum ada grup untuk chat</p>
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="h-8 w-8 text-gray-400" />
+            </div>
+            <p className="text-gray-500 font-medium">Belum ada grup untuk chat</p>
+            <p className="text-sm text-gray-400 mt-1">Buat atau join grup terlebih dahulu</p>
           </div>
         )}
       </div>
@@ -146,35 +159,54 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
     );
   }
 
+  // Get member count with proper fallback
+  const memberCount = members?.length || 0;
+  
+  console.log('ChatView - selectedGroup:', selectedGroup);
+  console.log('ChatView - members:', members);
+  console.log('ChatView - memberCount:', memberCount);
+  console.log('ChatView - membersLoading:', membersLoading);
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4 border-b bg-white">
+      <div className="flex items-center gap-3 p-4 border-b bg-gradient-to-r from-white to-blue-50 shadow-sm">
         <Button
           variant="ghost"
           size="sm"
           onClick={handleBackClick}
+          className="hover:bg-blue-100"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex items-center gap-3 flex-1">
-          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-            <span className="text-blue-700 font-bold text-sm">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-sm">
               {selectedGroup.name?.[0]?.toUpperCase() || 'G'}
             </span>
           </div>
           <div>
-            <h3 className="font-medium">{selectedGroup.name || 'Unnamed Group'}</h3>
+            <h3 className="font-semibold text-gray-900">{selectedGroup.name || 'Unnamed Group'}</h3>
             <div className="flex items-center gap-1 text-xs text-gray-500">
               <Users className="h-3 w-3" />
-              <span>{members?.length || 0} anggota</span>
+              {membersLoading ? (
+                <span>Memuat anggota...</span>
+              ) : (
+                <span>{memberCount} anggota</span>
+              )}
             </div>
           </div>
         </div>
+        <Badge 
+          variant="secondary" 
+          className="bg-blue-100 text-blue-700 border-blue-200"
+        >
+          {memberCount} member{memberCount !== 1 ? 's' : ''}
+        </Badge>
       </div>
 
       {/* Messages Area */}
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+      <ScrollArea className="flex-1 p-4 bg-gray-50" ref={scrollAreaRef}>
         <div className="space-y-4">
           {messagesLoading ? (
             <div className="text-center py-4">
@@ -190,15 +222,19 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
               />
             ))
           ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500">Belum ada pesan. Mulai percakapan!</p>
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <Users className="h-8 w-8 text-gray-400" />
+              </div>
+              <p className="text-gray-500 font-medium">Belum ada pesan</p>
+              <p className="text-sm text-gray-400 mt-1">Mulai percakapan dengan anggota grup!</p>
             </div>
           )}
         </div>
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="border-t bg-white">
+      <div className="border-t bg-white shadow-lg">
         <ChatInput
           onSendMessage={handleSendMessage}
           onUploadFile={handleUploadFile}
