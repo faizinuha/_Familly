@@ -1,8 +1,9 @@
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Fingerprint, Shield } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 interface PinAuthScreenProps {
   onAuthenticated: () => void;
@@ -16,7 +17,9 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [focused, setFocused] = useState(false);
   const { toast } = useToast();
+  const hiddenInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Check if biometric is enabled
@@ -27,12 +30,29 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
         securitySettings.fingerprintEnabled || securitySettings.faceIdEnabled
       );
     }
-    // Focus PIN input on mount
-    setTimeout(() => {
-      const input = document.getElementById('pin-input');
-      if (input) (input as HTMLInputElement).focus();
-    }, 100);
-  }, []);
+
+    // Focus the hidden input immediately
+    if (hiddenInputRef.current) {
+      hiddenInputRef.current.focus();
+    }
+
+    // Handle keyboard events for desktop
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        handlePinInput(pin + e.key);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handlePinInput(pin.slice(0, -1));
+      } else if (e.key === 'Enter' && pin.length === 6) {
+        e.preventDefault();
+        validatePin(pin);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [pin]);
 
   const handlePinInput = (value: string) => {
     if (value.length <= 6 && /^\d*$/.test(value)) {
@@ -62,6 +82,12 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
         variant: 'destructive',
       });
       setPin('');
+      // Refocus after error
+      setTimeout(() => {
+        if (hiddenInputRef.current) {
+          hiddenInputRef.current.focus();
+        }
+      }, 100);
     }
     setLoading(false);
   };
@@ -72,7 +98,6 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
 
       // Check if we're in Capacitor environment
       if (window.Capacitor?.isNativePlatform()) {
-        // For real implementation, use @capacitor/biometric-auth
         const confirmed = await simulateBiometricAuth();
         if (confirmed) {
           toast({
@@ -82,7 +107,6 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
           onAuthenticated();
         }
       } else {
-        // Web fallback - simulate biometric
         const confirmed = await simulateBiometricAuth();
         if (confirmed) {
           toast({
@@ -105,9 +129,7 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
 
   const simulateBiometricAuth = (): Promise<boolean> => {
     return new Promise((resolve) => {
-      // Generate random success/failure for demo
-      // In real app, this would call native biometric APIs
-      const isSuccess = Math.random() > 0.2; // 80% success rate for demo
+      const isSuccess = Math.random() > 0.2;
       setTimeout(() => {
         if (isSuccess) {
           resolve(true);
@@ -121,6 +143,19 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
         }
       }, 1500);
     });
+  };
+
+  const handlePinBoxClick = () => {
+    if (hiddenInputRef.current) {
+      hiddenInputRef.current.focus();
+    }
+  };
+
+  const handleDeletePin = () => {
+    setPin(pin.slice(0, -1));
+    if (hiddenInputRef.current) {
+      hiddenInputRef.current.focus();
+    }
   };
 
   return (
@@ -137,13 +172,15 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
         </CardHeader>
         <CardContent className="space-y-6">
           {/* PIN Input Display */}
-          <div className="flex justify-center gap-2">
+          <div className="flex justify-center gap-2" onClick={handlePinBoxClick}>
             {[...Array(6)].map((_, i) => (
               <div
                 key={i}
-                className={`w-12 h-12 border-2 rounded-lg flex items-center justify-center text-xl font-bold ${
+                className={`w-12 h-12 border-2 rounded-lg flex items-center justify-center text-xl font-bold cursor-pointer transition-colors ${
                   pin.length > i
                     ? 'border-blue-500 bg-blue-50'
+                    : focused
+                    ? 'border-blue-300 bg-blue-25'
                     : 'border-gray-300'
                 }`}
               >
@@ -152,19 +189,36 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
             ))}
           </div>
 
-          {/* Hidden input for mobile keyboards */}
+          {/* Hidden input for all keyboards */}
           <input
-            id="pin-input"
+            ref={hiddenInputRef}
             type="tel"
             inputMode="numeric"
             pattern="[0-9]*"
             value={pin}
             onChange={(e) => handlePinInput(e.target.value)}
-            className="absolute left-0 top-0 w-1 h-1 opacity-0"
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            className="absolute left-[-9999px] top-[-9999px] opacity-0 pointer-events-none"
             autoFocus
             maxLength={6}
             tabIndex={0}
           />
+
+          {/* Mobile keyboard hint */}
+          <div className="text-center text-sm text-gray-500">
+            {pin.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDeletePin}
+                className="mr-2"
+              >
+                Hapus
+              </Button>
+            )}
+            Ketik PIN Anda
+          </div>
 
           {/* Biometric Auth Button */}
           {biometricEnabled && (

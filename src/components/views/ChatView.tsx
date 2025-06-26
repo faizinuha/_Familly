@@ -41,6 +41,7 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
     try {
       await sendMessage(message, [], fileUrl, fileType, fileName);
     } catch (error) {
+      console.error('Error sending message:', error);
       toast({
         title: "Error",
         description: "Gagal mengirim pesan",
@@ -53,12 +54,24 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
     try {
       return await uploadFile(file);
     } catch (error) {
+      console.error('Error uploading file:', error);
       toast({
         title: "Error", 
         description: "Gagal upload file",
         variant: "destructive"
       });
       return null;
+    }
+  };
+
+  const handleBackClick = () => {
+    try {
+      console.log('Back button clicked, returning to group list');
+      onSelectGroup(null);
+    } catch (error) {
+      console.error('Error in handleBackClick:', error);
+      // Fallback - still try to go back
+      onSelectGroup(null);
     }
   };
 
@@ -78,11 +91,11 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                       <span className="text-blue-700 font-bold">
-                        {group.name[0]?.toUpperCase()}
+                        {group.name?.[0]?.toUpperCase() || 'G'}
                       </span>
                     </div>
                     <div>
-                      <div className="font-medium">{group.name}</div>
+                      <div className="font-medium">{group.name || 'Unnamed Group'}</div>
                       <div className="text-sm text-gray-500">
                         Tap untuk mulai chat
                       </div>
@@ -105,6 +118,34 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
 
   const selectedGroup = groups.find(g => g.id === selectedGroupId);
 
+  if (!selectedGroup) {
+    console.error('Selected group not found:', selectedGroupId);
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex items-center gap-3 p-4 border-b bg-white">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBackClick}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-1">
+            <h3 className="font-medium">Grup tidak ditemukan</h3>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-500 mb-4">Grup yang dipilih tidak tersedia</p>
+            <Button onClick={handleBackClick}>
+              Kembali ke Daftar Grup
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -112,21 +153,21 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onSelectGroup(null)}
+          onClick={handleBackClick}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex items-center gap-3 flex-1">
           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
             <span className="text-blue-700 font-bold text-sm">
-              {selectedGroup?.name[0]?.toUpperCase()}
+              {selectedGroup.name?.[0]?.toUpperCase() || 'G'}
             </span>
           </div>
           <div>
-            <h3 className="font-medium">{selectedGroup?.name}</h3>
+            <h3 className="font-medium">{selectedGroup.name || 'Unnamed Group'}</h3>
             <div className="flex items-center gap-1 text-xs text-gray-500">
               <Users className="h-3 w-3" />
-              <span>{members.length} anggota</span>
+              <span>{members?.length || 0} anggota</span>
             </div>
           </div>
         </div>
@@ -138,6 +179,7 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
           {messagesLoading ? (
             <div className="text-center py-4">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
+              <p className="text-sm text-gray-500 mt-2">Memuat pesan...</p>
             </div>
           ) : messages.length > 0 ? (
             messages.map((message) => (
