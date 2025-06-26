@@ -2,7 +2,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Download, FileText } from 'lucide-react';
+import { Download, Image, FileText } from 'lucide-react';
 
 interface ChatMessageProps {
   message: {
@@ -10,7 +10,6 @@ interface ChatMessageProps {
     message: string;
     sender_id: string;
     sender?: { full_name: string };
-    profiles?: { full_name: string };
     created_at: string;
     is_system_notification?: boolean;
     file_url?: string;
@@ -29,7 +28,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
 }) => {
   const isMyMessage = message.sender_id === currentUserId;
   const isSystemMessage = message.is_system_notification;
-  const senderName = message.sender?.full_name || message.profiles?.full_name || 'Unknown User';
 
   const formatMessage = (text: string) => {
     // Format mentions @username
@@ -50,7 +48,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             <img 
               src={message.file_url} 
               alt={message.file_name || 'Image'} 
-              className="max-w-xs max-h-48 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+              className="max-w-xs max-h-48 rounded-lg cursor-pointer"
               onClick={() => window.open(message.file_url, '_blank')}
             />
           </div>
@@ -62,7 +60,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               size="sm"
               variant="outline"
               onClick={() => window.open(message.file_url, '_blank')}
-              className="h-6 w-6 p-0"
             >
               <Download className="h-3 w-3" />
             </Button>
@@ -83,15 +80,15 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   }
 
   return (
-    <div className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'} mb-4`}>
+    <div className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'} mb-3`}>
       <div className={`max-w-xs lg:max-w-md xl:max-w-lg`}>
         {!isMyMessage && (
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white">
-              {senderName[0]?.toUpperCase() || '?'}
+            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700">
+              {message.sender?.full_name?.[0]?.toUpperCase() || '?'}
             </div>
             <span className="text-xs text-gray-600 font-medium">
-              {senderName}
+              {message.sender?.full_name || 'Unknown'}
             </span>
             <span className="text-xs text-gray-400">
               {new Date(message.created_at).toLocaleTimeString('id-ID', { 
@@ -102,10 +99,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           </div>
         )}
         
-        <div className={`p-3 rounded-2xl shadow-sm ${
+        <div className={`p-3 rounded-2xl ${
           isMyMessage 
-            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-md' 
-            : 'bg-white border border-gray-200 text-gray-900 rounded-bl-md'
+            ? 'bg-blue-500 text-white rounded-br-md' 
+            : 'bg-gray-100 text-gray-900 rounded-bl-md'
         }`}>
           {message.message && (
             <div 
