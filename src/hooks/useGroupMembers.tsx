@@ -20,11 +20,13 @@ export function useGroupMembers(groupId: string | null) {
       setLoading(false);
       return;
     }
+    
+    console.log('useGroupMembers - groupId changed:', groupId);
     fetchMembers();
     
     // Set up real-time subscription for member changes
     const channel = supabase
-      .channel(`group_members_${groupId}`)
+      .channel(`group_members_${groupId}_${Date.now()}`)
       .on('postgres_changes', 
         {
           event: '*',
@@ -32,20 +34,24 @@ export function useGroupMembers(groupId: string | null) {
           table: 'group_members',
           filter: `group_id=eq.${groupId}`
         },
-        () => {
-          console.log('Group members changed, refetching...');
+        (payload) => {
+          console.log('Group members real-time update:', payload);
           fetchMembers();
         }
       )
       .subscribe();
 
     return () => {
+      console.log('Cleaning up group members subscription');
       supabase.removeChannel(channel);
     };
   }, [groupId]);
 
   const fetchMembers = async () => {
-    if (!groupId) return;
+    if (!groupId) {
+      console.log('No groupId provided, skipping fetch');
+      return;
+    }
     
     console.log('Fetching members for group:', groupId);
     setLoading(true);
@@ -64,23 +70,33 @@ export function useGroupMembers(groupId: string | null) {
         throw error;
       }
       
-      console.log('Raw members data:', data);
+      console.log('Raw members data from DB:', data);
       
       // Transform the data to match our expected type
       const transformedMembers = (data || []).map((member: any) => ({
         ...member,
-        profiles: member.profiles || null
+        profiles: member.profiles || { id: member.user_id, full_name: 'Unknown' }
       })) as GroupMemberWithProfile[];
       
       console.log('Transformed members:', transformedMembers);
+      console.log('Member count:', transformedMembers.length);
       setMembers(transformedMembers);
     } catch (error) {
-      console.error('Error fetching group members:', error);
+      console.error('Error in fetchMembers:', error);
       setMembers([]);
     } finally {
       setLoading(false);
     }
   };
+
+  // Add debugging for member count
+  useEffect(() => {
+    console.log('useGroupMembers - members updated:', {
+      groupId,
+      memberCount: members.length,
+      members: members.map(m => ({ id: m.id, user_id: m.user_id, full_name: m.profiles?.full_name }))
+    });
+  }, [members, groupId]);
 
   return { members, loading, refreshMembers: fetchMembers };
 }

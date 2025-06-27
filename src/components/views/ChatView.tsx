@@ -27,6 +27,16 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
   const { messages, loading: messagesLoading, sendMessage, uploadFile } = useGroupMessages(selectedGroupId);
   const { members, loading: membersLoading } = useGroupMembers(selectedGroupId);
 
+  // Debug logging for member count
+  useEffect(() => {
+    console.log('ChatView members update:', {
+      selectedGroupId,
+      members,
+      memberCount: members?.length || 0,
+      membersLoading
+    });
+  }, [members, selectedGroupId, membersLoading]);
+
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -159,13 +169,15 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
     );
   }
 
-  // Get member count with proper fallback
-  const memberCount = members?.length || 0;
+  // Get actual member count with proper loading state
+  const actualMemberCount = members?.length || 0;
   
-  console.log('ChatView - selectedGroup:', selectedGroup);
-  console.log('ChatView - members:', members);
-  console.log('ChatView - memberCount:', memberCount);
-  console.log('ChatView - membersLoading:', membersLoading);
+  console.log('ChatView render - member count:', {
+    selectedGroupId,
+    actualMemberCount,
+    membersLoading,
+    members: members?.map(m => ({ id: m.id, name: m.profiles?.full_name }))
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -192,7 +204,7 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
               {membersLoading ? (
                 <span>Memuat anggota...</span>
               ) : (
-                <span>{memberCount} anggota</span>
+                <span>{actualMemberCount} anggota</span>
               )}
             </div>
           </div>
@@ -201,7 +213,7 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
           variant="secondary" 
           className="bg-blue-100 text-blue-700 border-blue-200"
         >
-          {memberCount} member{memberCount !== 1 ? 's' : ''}
+          {membersLoading ? '...' : actualMemberCount} member{actualMemberCount !== 1 ? 's' : ''}
         </Badge>
       </div>
 

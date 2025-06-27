@@ -1,3 +1,4 @@
+
 import Header from '@/components/Header';
 import Navigation from '@/components/Navigation';
 import PinAuthScreen from '@/components/PinAuthScreen';
@@ -217,6 +218,8 @@ const Index = () => {
             devices={devices}
             isHeadOfFamily={isHeadOfFamily}
             onSendNotification={handleSendNotification}
+            groups={groups}
+            selectedGroupId={selectedGroupId}
           />
         );
       case 'chat':
@@ -240,10 +243,10 @@ const Index = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 pb-20">
         <div
           className={`h-full ${activeTab === 'chat' ? 'flex flex-col' : ''}`}
         >
@@ -259,11 +262,13 @@ const Index = () => {
         </div>
       </div>
 
-      <Navigation
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        isHeadOfFamily={isHeadOfFamily}
-      />
+      <div className="fixed bottom-0 left-0 right-0 z-50">
+        <Navigation
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          isHeadOfFamily={isHeadOfFamily}
+        />
+      </div>
     </div>
   );
 };
