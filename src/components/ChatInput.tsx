@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -145,7 +144,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
       
-      <div className="flex items-center gap-2 p-2 bg-white border-t">
+      <div className="flex items-center gap-2 p-4 bg-white border-t">
         <input
           type="file"
           ref={fileInputRef}
