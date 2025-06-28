@@ -10,7 +10,7 @@ interface ChatInputProps {
   disabled?: boolean;
 }
 
-const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '😢', '😡', '🎉', '🔥', '💯'];
+const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '😢', '😡', '🎉', '🔥', '💯','💔'];
 
 // File type whitelist for security
 const ALLOWED_FILE_TYPES = [
