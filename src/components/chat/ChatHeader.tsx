@@ -49,7 +49,7 @@ export default function ChatHeader({
         variant="secondary" 
         className="bg-blue-100 text-blue-700 border-blue-200"
       >
-        {membersLoading ? '...' : memberCount} member{memberCount !== 1 ? 's' : ''}
+        {membersLoading ? '...' : `${memberCount} anggota`}
       </Badge>
     </div>
   );

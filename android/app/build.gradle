@@ -1,14 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.vvi_studio.family"
+    namespace "com.vvi_studio"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.vvi_studio.family"
+        applicationId "com.vvi_studio"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0.00001"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

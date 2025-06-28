@@ -144,7 +144,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
       
-      <div className="flex items-center gap-2 p-4 bg-white border-t">
+      <div className="flex items-center gap-2 p-4 bg-white border-t sticky bottom-0 z-20">
         <input
           type="file"
           ref={fileInputRef}
@@ -179,7 +179,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           onKeyPress={handleKeyPress}
           placeholder="Ketik pesan..."
           disabled={disabled || uploading}
-          className="flex-1"
+          className="flex-1 sticky-bottom-0 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           maxLength={1000}
         />
         

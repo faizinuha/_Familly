@@ -1,4 +1,4 @@
-package com.vvi_studio.family;
+package com.vvi_studio;
 
 import com.getcapacitor.BridgeActivity;
 

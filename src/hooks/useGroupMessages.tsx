@@ -1,7 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from './useAuth';
 
 type GroupMessage = Tables<'group_messages'> & {
@@ -15,17 +14,29 @@ export function useGroupMessages(groupId: string | null) {
   const [messages, setMessages] = useState<GroupMessage[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const channelRef = useRef<any>(null);
   useEffect(() => {
     if (!groupId || !user) {
       setMessages([]);
       setLoading(false);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
       return;
     }
 
     fetchMessages();
 
+    // Cleanup previous channel if exists
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
+    const channelName = `group-messages-${groupId}`;
     const channel = supabase
-      .channel(`group-messages-${groupId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -35,13 +46,17 @@ export function useGroupMessages(groupId: string | null) {
           filter: `group_id=eq.${groupId}`,
         },
         (payload) => {
-          fetchMessages(); // Refresh to get proper relations
+          fetchMessages();
         }
       )
       .subscribe();
+    channelRef.current = channel;
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [groupId, user]);
 
@@ -51,10 +66,12 @@ export function useGroupMessages(groupId: string | null) {
     try {
       const { data, error } = await supabase
         .from('group_messages')
-        .select(`
+        .select(
+          `
           *,
           profiles(full_name)
-        `)
+        `
+        )
         .eq('group_id', groupId)
         .order('created_at', { ascending: true });
 
@@ -62,7 +79,9 @@ export function useGroupMessages(groupId: string | null) {
 
       const mappedMessages = (data || []).map((message) => ({
         ...message,
-        sender: message.profiles ? { full_name: message.profiles.full_name } : { full_name: 'Unknown' }
+        sender: message.profiles
+          ? { full_name: message.profiles.full_name }
+          : { full_name: 'Unknown' },
       })) as GroupMessage[];
 
       setMessages(mappedMessages);
@@ -74,7 +93,13 @@ export function useGroupMessages(groupId: string | null) {
     }
   };
 
-  const sendMessage = async (message: string, mentions: string[] = [], fileUrl?: string, fileType?: string, fileName?: string) => {
+  const sendMessage = async (
+    message: string,
+    mentions: string[] = [],
+    fileUrl?: string,
+    fileType?: string,
+    fileName?: string
+  ) => {
     if (!user || !groupId || (!message.trim() && !fileUrl)) return;
 
     try {
@@ -119,7 +144,7 @@ export function useGroupMessages(groupId: string | null) {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from('chat-files')
         .upload(fileName, file);
@@ -133,7 +158,7 @@ export function useGroupMessages(groupId: string | null) {
       return {
         url: data.publicUrl,
         name: file.name,
-        type: file.type
+        type: file.type,
       };
     } catch (error) {
       console.error('❌ Error uploading file:', error);

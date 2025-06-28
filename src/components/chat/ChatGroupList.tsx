@@ -43,7 +43,7 @@ export default function ChatGroupList({ groups, onSelectGroup }: ChatGroupListPr
                 <div className="flex flex-col items-center">
                   <Users className="h-6 w-6 text-blue-500 mb-1" />
                   <Badge variant="secondary" className="text-xs">
-                    Chat
+                    {group.memberCount ? `${group.memberCount} anggota` : 'Chat'}
                   </Badge>
                 </div>
               </CardTitle>

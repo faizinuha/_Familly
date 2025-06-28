@@ -1,49 +1,77 @@
+import ChatGroupList from '@/components/chat/ChatGroupList';
+import ChatHeader from '@/components/chat/ChatHeader';
+import ChatMessages from '@/components/chat/ChatMessages';
+import ChatInput from '@/components/ChatInput';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useGroupMembers } from '@/hooks/useGroupMembers';
+import { useGroupMessages } from '@/hooks/useGroupMessages';
+import { Phone, User, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { useGroupMessages } from "@/hooks/useGroupMessages";
-import { useGroupMembers } from "@/hooks/useGroupMembers";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
-import ChatHeader from "@/components/chat/ChatHeader";
-import ChatGroupList from "@/components/chat/ChatGroupList";
-import ChatMessages from "@/components/chat/ChatMessages";
-import ChatInput from "@/components/ChatInput";
-import EmptyState from "@/components/ui/EmptyState";
-import { Users } from "lucide-react";
+interface Group {
+  id: string;
+  name: string;
+  // Add other properties as needed
+}
 
 interface ChatViewProps {
-  groups: any[];
+  groups: Group[];
   selectedGroupId: string | null;
   onSelectGroup: (groupId: string | null) => void;
 }
 
-export default function ChatView({ groups, selectedGroupId, onSelectGroup }: ChatViewProps) {
+export default function ChatView({
+  groups,
+  selectedGroupId,
+  onSelectGroup,
+}: ChatViewProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  
-  const { messages, loading: messagesLoading, sendMessage, uploadFile } = useGroupMessages(selectedGroupId);
-  const { members, loading: membersLoading } = useGroupMembers(selectedGroupId);
+
+  // Tab state: 'group', 'contact', 'call'
+  const [activeTab, setActiveTab] = useState<'group' | 'contact' | 'call'>(
+    'group'
+  );
+
+  // Only fetch group data if tab is group
+  const {
+    messages,
+    loading: messagesLoading,
+    sendMessage,
+    uploadFile,
+  } = useGroupMessages(activeTab === 'group' ? selectedGroupId : null);
+  const { members, loading: membersLoading } = useGroupMembers(
+    activeTab === 'group' ? selectedGroupId : null
+  );
 
   // Debug logging for member count
   useEffect(() => {
-    console.log('ChatView members update:', {
-      selectedGroupId,
-      members,
-      memberCount: members?.length || 0,
-      membersLoading
-    });
-  }, [members, selectedGroupId, membersLoading]);
+    if (activeTab === 'group') {
+      console.log('ChatView members update:', {
+        selectedGroupId,
+        members,
+        memberCount: members?.length || 0,
+        membersLoading,
+      });
+    }
+  }, [members, selectedGroupId, membersLoading, activeTab]);
 
-  const handleSendMessage = async (message: string, fileUrl?: string, fileType?: string, fileName?: string) => {
+  const handleSendMessage = async (
+    message: string,
+    fileUrl?: string,
+    fileType?: string,
+    fileName?: string
+  ) => {
     try {
       await sendMessage(message, [], fileUrl, fileType, fileName);
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
-        title: "Error",
-        description: "Gagal mengirim pesan",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Gagal mengirim pesan',
+        variant: 'destructive',
       });
     }
   };
@@ -54,76 +82,120 @@ export default function ChatView({ groups, selectedGroupId, onSelectGroup }: Cha
     } catch (error) {
       console.error('Error uploading file:', error);
       toast({
-        title: "Error", 
-        description: "Gagal upload file",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Gagal upload file',
+        variant: 'destructive',
       });
       return null;
     }
   };
 
   const handleBackClick = () => {
-    try {
-      console.log('Back button clicked, returning to group list');
-      onSelectGroup(null);
-    } catch (error) {
-      console.error('Error in handleBackClick:', error);
-      onSelectGroup(null);
-    }
+    // Kembali ke daftar grup tanpa reload/blank
+    onSelectGroup(null);
   };
 
-  if (!selectedGroupId) {
-    return <ChatGroupList groups={groups} onSelectGroup={onSelectGroup} />;
-  }
-
-  const selectedGroup = groups.find(g => g.id === selectedGroupId);
-
-  if (!selectedGroup) {
-    console.error('Selected group not found:', selectedGroupId);
-    return (
-      <div className="flex flex-col h-full">
-        <ChatHeader
-          selectedGroup={{ id: selectedGroupId, name: 'Grup tidak ditemukan' }}
-          memberCount={0}
-          membersLoading={false}
-          onBackClick={handleBackClick}
-        />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-gray-500 mb-4">Grup yang dipilih tidak tersedia</p>
-            <Button onClick={handleBackClick}>
-              Kembali ke Daftar Grup
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const actualMemberCount = members?.length || 0;
+  // Tab Navbar
+  const tabList = [
+    { key: 'group', label: 'Grup', icon: Users },
+    { key: 'contact', label: 'Kontak', icon: User },
+    { key: 'call', label: 'Telepon', icon: Phone },
+  ];
 
   return (
     <div className="flex flex-col h-full">
-      <ChatHeader
-        selectedGroup={selectedGroup}
-        memberCount={actualMemberCount}
-        membersLoading={membersLoading}
-        onBackClick={handleBackClick}
-      />
-
-      <ChatMessages
-        messages={messages}
-        messagesLoading={messagesLoading}
-        currentUserId={user?.id || ''}
-      />
-
-      <div className="border-t bg-white shadow-lg">
-        <ChatInput
-          onSendMessage={handleSendMessage}
-          onUploadFile={handleUploadFile}
-          disabled={messagesLoading}
-        />
+      {/* Tab Navbar */}
+      <div className="flex border-b bg-white">
+        {tabList.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() =>
+              setActiveTab(tab.key as 'group' | 'contact' | 'call')
+            }
+            className={`flex-1 flex flex-col items-center py-2 px-1 text-sm font-medium transition-all border-b-2 ${
+              activeTab === tab.key
+                ? 'border-blue-500 text-blue-600 bg-blue-50'
+                : 'border-transparent text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            <tab.icon className="h-5 w-5 mb-1" />
+            {tab.label}
+          </button>
+        ))}
       </div>
+
+      {/* Tab Content */}
+      {activeTab === 'group' && (
+        <>
+          {!selectedGroupId ? (
+            <ChatGroupList groups={groups} onSelectGroup={onSelectGroup} />
+          ) : (
+            (() => {
+              const selectedGroup = groups.find(
+                (g) => g.id === selectedGroupId
+              );
+              if (!selectedGroup) {
+                return (
+                  <div className="flex flex-col h-full">
+                    <ChatHeader
+                      selectedGroup={{
+                        id: selectedGroupId,
+                        name: 'Grup tidak ditemukan',
+                      }}
+                      memberCount={0}
+                      membersLoading={false}
+                      onBackClick={handleBackClick}
+                    />
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-gray-500 mb-4">
+                          Grup yang dipilih tidak tersedia
+                        </p>
+                        <Button onClick={handleBackClick}>
+                          Kembali ke Daftar Grup
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              const actualMemberCount = members?.length || 0;
+              return (
+                <>
+                  <ChatHeader
+                    selectedGroup={selectedGroup}
+                    memberCount={actualMemberCount}
+                    membersLoading={membersLoading}
+                    onBackClick={handleBackClick}
+                  />
+                  <ChatMessages
+                    messages={messages}
+                    messagesLoading={messagesLoading}
+                    currentUserId={user?.id || ''}
+                  />
+                  <div className="border-t bg-white shadow-lg sticky bottom-0 z-10">
+                    <ChatInput
+                      onSendMessage={handleSendMessage}
+                      onUploadFile={handleUploadFile}
+                      disabled={messagesLoading}
+                    />
+                  </div>
+                </>
+              );
+            })()
+          )}
+        </>
+      )}
+      {activeTab === 'contact' && (
+        <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">
+          Fitur kontak coming soon
+        </div>
+      )}
+      {activeTab === 'call' && (
+        <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">
+          Fitur telepon coming soon
+        </div>
+      )}
     </div>
   );
 }
