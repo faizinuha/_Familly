@@ -45,7 +45,6 @@ Aplikasi manajemen keluarga yang lengkap dengan fitur monitoring, chat grup, dan
 
 ### 🔔 Sistem Notifikasi
 - **Push Notifications**: Support untuk notifikasi bubble di HP
-- **Email Notifications**: Kirim alert melalui email
 - **System Alerts**: Notifikasi sistem untuk aktivitas penting
 - **Real-time Updates**: Notifikasi langsung tanpa delay
 - **Toast Messages**: Feedback visual untuk setiap aksi
@@ -143,17 +142,8 @@ Aplikasi manajemen keluarga yang lengkap dengan fitur monitoring, chat grup, dan
 
 ## 🚀 Deployment & Setup
 
-### Environment Variables
-Untuk fitur email notification, set environment variable berikut di Supabase:
-```
-RESEND_API_KEY=your_resend_api_key_here
-```
-
 ### Deployment Options
-- **Lovable Platform**: Deploy langsung dari Lovable editor
 - **Vercel/Netlify**: Frontend hosting dengan Supabase backend
-- **Custom Domain**: Support custom domain (paid plan)
-- **SSL**: Secure connection dengan HTTPS
 
 ## 💡 Cara Penggunaan
 
@@ -162,19 +152,12 @@ RESEND_API_KEY=your_resend_api_key_here
 3. **Buat/Join Grup**: Buat grup baru atau join dengan kode
 4. **Mulai Chat**: Chat dengan anggota keluarga + typing indicators
 5. **Monitor Device**: (Kepala keluarga) Monitor device anggota + email alerts
-6. **Upload File**: Share foto dan dokumen dalam chat
+6. **Upload File**: Share foto dan dokumen dalam chat 
 7. **Gunakan Emoji**: Express dengan emoji dalam chat
 8. **Setup PIN**: Optional PIN authentication untuk keamanan
 
 ## 🎨 Screenshots & Preview
 
-- **Modern Home Dashboard**: Gradient backgrounds dengan smooth animations
-- **Elegant Stats Cards**: Hover effects dan modern color schemes
-- **Real-time Chat Interface**: Bubble design dengan typing indicators
-- **Responsive Layout**: Perfect untuk semua device sizes
-- **Beautiful Auth Pages**: Modern login/register dengan gradient backgrounds
-- **Device Monitoring**: Clean interface dengan email notification options
-- **File Upload**: Drag & drop dengan preview functionality
 
 ## 📈 Changelog
 

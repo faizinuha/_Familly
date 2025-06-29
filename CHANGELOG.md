@@ -6,58 +6,94 @@ All notable changes to the Good Family project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## \[1.1.5 - 1.2.0 ] - 2025-08-01 ( Update )
+* Fungsional Ios
+* update Ui system
+* video call
+* Tracking Location
+  
+## \[1.1.0] - 2025-07-10 ( cooming soon ) 
 
 ### Added
-- Modern and elegant Home screen design with gradients and animations
-- Enhanced UI components with hover effects and smooth transitions
-- Improved visual hierarchy with better color schemes
-- Responsive card layouts with gradient backgrounds
-- Enhanced activity display with user avatars and timestamps
+
+* Fitur Voice Call (versi awal)
+* UI halaman Telepon: tombol panggil, daftar kontak online
+* Notifikasi panggilan masuk & suara ringtone
+* Sistem accept/decline panggilan
+
+## \[1.0.9] - 2025-07-07
+
+### Added
+
+* UI tab Call & Contact sudah aktif (belum fungsi penuh)
+* Placeholder untuk fitur panggilan
+* Ikon status kontak: online/offline
 
 ### Changed
-- Updated Home view layout to be more visually appealing
-- Improved color scheme with modern gradient backgrounds
-- Enhanced typography and spacing throughout the interface
-- Better visual indicators for online status and activities
+
+* Navigasi antar tab makin halus
+
+## \[1.0.8] - 2025-07-03
 
 ### Fixed
-- Improved responsive design for better mobile experience
-- Enhanced card hover effects and transitions
 
-## [Previous Versions]
+* Perbaikan bug scroll saat kirim file
+* Penghapusan duplikat subscribe di channel Supabase
+
+## \[1.0.7] - 2025-06-30
+
+### Changed
+
+* Optimasi komponen `ChatView` agar tidak re-subscribe saat kembali ke halaman sebelumnya
+* Transisi antar grup dibuat lebih smooth
+
+## \[1.0.6] - 2025-06-28
 
 ### Added
-- Family group management system
-- Real-time chat functionality with file upload support
-- Device monitoring for family members
-- PIN authentication system
-- User profile management
-- Email notification system for monitoring alerts
-- Typing indicators in chat
-- Enhanced device monitoring with email notifications
-- Modern authentication UI design
 
-### Features
-- **Real-time Chat**: Send messages, files, and emojis in family groups
-- **Device Monitoring**: Track family members' device usage and send notifications
-- **Group Management**: Create, join, and manage family groups with invite codes
-- **File Sharing**: Upload and share images and documents in chat
-- **PIN Security**: Optional PIN protection for app access
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
-- **Email Notifications**: Send monitoring alerts via email
-- **User Status**: Real-time online/offline status tracking
-- **Activity Logs**: Monitor family activities and app usage
+* Header chat baru dengan badge anggota dan tombol kembali
+* Komponen `EmptyState` universal untuk semua tab kosong
 
-### Technical
-- Built with React 18, TypeScript, and Tailwind CSS
-- Supabase backend for real-time functionality
-- Shadcn/UI components for consistent design
-- Lucide React icons
-- Real-time subscriptions for live updates
-- Row Level Security (RLS) for data protection
-- File storage with Supabase Storage
-- Email integration with Resend API
+## \[1.0.5] - 2025-06-26
+
+### Fixed
+
+* Bug subscribe Supabase: "subscribe can only be called a single time" diselesaikan
+* Cleanup subscription saat unmount
+
+## \[1.0.4] - 2025-06-24
+
+### Added
+
+* Komponen ChatGroupList dengan desain baru (gradien, hover effect)
+* Placeholder UI untuk Call dan Contact tab
+
+## \[1.0.3] - 2025-06-22
+
+### Changed
+
+* Desain halaman home diperbarui (modern & elegan)
+* Gradient background + avatar user di activity
+
+## \[1.0.2] - 2025-06-20
+
+### Fixed
+
+* Responsiveness diperbaiki di layout tablet
+* Transisi hover card lebih halus di perangkat sentuh
+
+## \[1.0.1] - 2025-06-18
+
+### Fixed
+
+* Minor bug di komponen chat (double render)
+* Layout header grup chat yang tidak sejajar
+
+## \[1.0.0] - 2025-05-30
+
+### Added
+
+* Semua fitur utama: grup keluarga, real-time chat, monitor perangkat, file upload, email notifikasi, dll.
 
 ---
 
