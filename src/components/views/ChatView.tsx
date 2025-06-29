@@ -48,7 +48,7 @@ export default function ChatView({
 
   // Debug logging for member count
   useEffect(() => {
-    if (activeTab === 'group') {
+    if (activeTab === 'group' && selectedGroupId) {
       console.log('ChatView members update:', {
         selectedGroupId,
         members,
@@ -90,8 +90,31 @@ export default function ChatView({
     }
   };
 
+  const [groupList, setGroupList] = useState<Group[]>(groups);
+  const [lastOpenedGroupId, setLastOpenedGroupId] = useState<string | null>(
+    null
+  );
+
+  // Filter: hanya grup yang sudah di-join atau dibuat user
+  const filteredGroups = groups.filter((g: any) => {
+    // Fallback: jika tidak ada properti joined/ownerId, anggap false
+    const isJoined = g.joined === true;
+    const isOwner = g.ownerId === user?.id;
+    return isJoined || isOwner;
+  });
+
+  // Sync last opened group
+  useEffect(() => {
+    if (selectedGroupId) setLastOpenedGroupId(selectedGroupId);
+  }, [selectedGroupId]);
+
+  // Sync groupList with props.groups jika berubah
+  useEffect(() => {
+    setGroupList(groups);
+  }, [groups]);
+
   const handleBackClick = () => {
-    // Kembali ke daftar grup tanpa reload/blank
+    if (membersLoading) return;
     onSelectGroup(null);
   };
 
@@ -128,7 +151,11 @@ export default function ChatView({
       {activeTab === 'group' && (
         <>
           {!selectedGroupId ? (
-            <ChatGroupList groups={groups} onSelectGroup={onSelectGroup} />
+            <ChatGroupList
+              groups={filteredGroups}
+              onSelectGroup={onSelectGroup}
+              lastOpenedGroupId={lastOpenedGroupId}
+            />
           ) : (
             (() => {
               const selectedGroup = groups.find(
@@ -159,7 +186,26 @@ export default function ChatView({
                   </div>
                 );
               }
-              const actualMemberCount = members?.length || 0;
+              // Jangan render ChatHeader/ChatMessages jika members masih loading atau null
+              if (membersLoading) {
+                return (
+                  <div className="flex flex-col h-full items-center justify-center">
+                    <div className="text-gray-400 text-sm">
+                      Memuat anggota grup...
+                    </div>
+                  </div>
+                );
+              }
+              if (!members) {
+                return (
+                  <div className="flex flex-col h-full items-center justify-center">
+                    <div className="text-gray-400 text-sm">
+                      Tidak ada anggota grup ditemukan.
+                    </div>
+                  </div>
+                );
+              }
+              const actualMemberCount = members.length;
               return (
                 <>
                   <ChatHeader

@@ -113,7 +113,7 @@ const GroupsView: React.FC<GroupsViewProps> = ({
                       {group.name[0]?.toUpperCase()}
                     </div>
                     <div className="flex flex-col">
-                      <span>{group.name}</span>
+                      <span> Nama : {group.name}</span>
                       {isHeadOfFamily && (
                         <Badge variant="default" className="bg-yellow-500 text-white text-xs w-fit">
                           Kepala Keluarga
@@ -143,10 +143,10 @@ const GroupsView: React.FC<GroupsViewProps> = ({
                     {groupMembers && groupMembers.filter(m => m.group_id === group.id).map((member) => (
                       <div key={member.user_id} className="flex flex-col items-center">
                         <div className="h-7 w-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-blue-700">
-                          {member.profiles?.full_name?.[0]?.toUpperCase() || "?"}
+                          {member.profiles?.full_name?.[0]?.toUpperCase() || member.user_id?.slice(0, 1)?.toUpperCase() || '?'}
                         </div>
                         <span className="text-[10px] mt-1 text-gray-500 max-w-[40px] truncate">
-                          {member.profiles?.full_name?.split(" ")[0]}
+                          {member.profiles?.full_name}
                         </span>
                       </div>
                     ))}

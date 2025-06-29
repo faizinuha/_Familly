@@ -48,6 +48,8 @@ const HomeView: React.FC<HomeViewProps> = ({
         <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full blur-2xl"></div>
       </div>
 
+
+          
       {/* Modern Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 border-blue-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
@@ -93,29 +95,9 @@ const HomeView: React.FC<HomeViewProps> = ({
         </Card>
       </div>
 
-      {/* Info Card with Modern Design */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-lg">
-        <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center flex-shrink-0 shadow-lg">
-              <span className="text-white text-sm font-bold">💡</span>
-            </div>
-            <div>
-              <h4 className="font-semibold text-blue-900 mb-2 text-lg">Perbedaan Device Online & Perangkat Saya</h4>
-              <div className="space-y-2 text-sm text-blue-700">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
-                  <span><strong>Device Online:</strong> Total semua perangkat keluarga yang sedang aktif/online</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                  <span><strong>Perangkat Saya:</strong> Hanya perangkat yang terdaftar atas nama Anda</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          
+
+          
 
       {/* Compact Activities Section */}
       <Card className="shadow-lg border-0 bg-white">

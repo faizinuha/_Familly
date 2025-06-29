@@ -1,4 +1,3 @@
-
 import Header from '@/components/Header';
 import Navigation from '@/components/Navigation';
 import PinAuthScreen from '@/components/PinAuthScreen';
@@ -16,6 +15,7 @@ import { useGroupMessages } from '@/hooks/useGroupMessages';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useUserStatus } from '@/hooks/useUserStatus';
+import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
 
 const Index = () => {
@@ -23,6 +23,7 @@ const Index = () => {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [newGroupName, setNewGroupName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
+  const [joinedGroupIds, setJoinedGroupIds] = useState<string[]>([]);
 
   const { user, signOut } = useAuth();
   const { profile, isHeadOfFamily } = useProfile();
@@ -37,6 +38,21 @@ const Index = () => {
   const { isAuthenticated, pinEnabled, authenticate, requireAuth } =
     usePinAuth();
 
+  // Ambil daftar group_id yang sudah di-join user
+  useEffect(() => {
+    const fetchJoinedGroups = async () => {
+      if (!user?.id) return;
+      const { data, error } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', user.id);
+      if (!error && data) {
+        setJoinedGroupIds(data.map((row: any) => row.group_id));
+      }
+    };
+    fetchJoinedGroups();
+  }, [user?.id]);
+
   // Auto-select first group
   useEffect(() => {
     if (groups.length > 0 && !selectedGroupId) {
@@ -46,7 +62,7 @@ const Index = () => {
 
   // Update user activity
   useEffect(() => {
-    updateMyStatus(true, `Menggunakan Good Family - Tab: ${activeTab}`);
+    updateMyStatus(true, `Menggunakan Family - Tab: ${activeTab}`);
   }, [activeTab, updateMyStatus]);
 
   // Handle app blur/focus for PIN auth
@@ -182,7 +198,7 @@ const Index = () => {
     }
   };
 
-  const selectedGroup = groups.find((g) => g.id === selectedGroupId);
+  const selectedGroup = groups.find((g) => g.name === selectedGroupId);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -222,14 +238,20 @@ const Index = () => {
             selectedGroupId={selectedGroupId}
           />
         );
-      case 'chat':
+      case 'chat': {
+        // Filter: hanya grup yang sudah di-join user atau dibuat user
+        const filteredGroups = groups.filter(
+          (g) =>
+            joinedGroupIds.includes(g.id) || g.head_of_family_id === user?.id
+        );
         return (
           <ChatView
-            groups={groups}
+            groups={filteredGroups}
             selectedGroupId={selectedGroupId}
             onSelectGroup={setSelectedGroupId}
           />
         );
+      }
       case 'settings':
         return <SettingsView />;
       default:

@@ -1,8 +1,6 @@
-
-import React from 'react';
-import { ArrowLeft, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Users } from 'lucide-react';
 
 interface ChatHeaderProps {
   selectedGroup: { id: string; name: string };
@@ -11,19 +9,22 @@ interface ChatHeaderProps {
   onBackClick: () => void;
 }
 
-export default function ChatHeader({ 
-  selectedGroup, 
-  memberCount, 
-  membersLoading, 
-  onBackClick 
+export default function ChatHeader({
+  selectedGroup,
+  memberCount,
+  membersLoading,
+  onBackClick,
 }: ChatHeaderProps) {
   return (
     <div className="flex items-center gap-3 p-4 border-b bg-gradient-to-r from-white to-blue-50 shadow-sm">
       <Button
         variant="ghost"
         size="sm"
-        onClick={onBackClick}
-        className="hover:bg-blue-100"
+        onClick={() => {
+          if (!membersLoading) onBackClick();
+        }}
+        className={`hover:bg-blue-100${membersLoading ? ' opacity-50 cursor-not-allowed' : ''}`}
+        disabled={membersLoading}
       >
         <ArrowLeft className="h-4 w-4" />
       </Button>
@@ -34,7 +35,9 @@ export default function ChatHeader({
           </span>
         </div>
         <div>
-          <h3 className="font-semibold text-gray-900">{selectedGroup.name || 'Unnamed Group'}</h3>
+          <h3 className="font-semibold text-gray-900">
+            {selectedGroup.name || 'Unnamed Group'}
+          </h3>
           <div className="flex items-center gap-1 text-xs text-gray-500">
             <Users className="h-3 w-3" />
             {membersLoading ? (
@@ -45,8 +48,8 @@ export default function ChatHeader({
           </div>
         </div>
       </div>
-      <Badge 
-        variant="secondary" 
+      <Badge
+        variant="secondary"
         className="bg-blue-100 text-blue-700 border-blue-200"
       >
         {membersLoading ? '...' : `${memberCount} anggota`}
