@@ -95,6 +95,9 @@ export default function ChatView({
     null
   );
 
+  // Daftar grup yang sudah di-join user atau dibuat user
+  const availableGroups = groups;
+
   // Filter: hanya grup yang sudah di-join atau dibuat user
   const filteredGroups = groups.filter((g: any) => {
     // Fallback: jika tidak ada properti joined/ownerId, anggap false
@@ -152,13 +155,13 @@ export default function ChatView({
         <>
           {!selectedGroupId ? (
             <ChatGroupList
-              groups={filteredGroups}
+              groups={availableGroups}
               onSelectGroup={onSelectGroup}
               lastOpenedGroupId={lastOpenedGroupId}
             />
           ) : (
             (() => {
-              const selectedGroup = groups.find(
+              const selectedGroup = availableGroups.find(
                 (g) => g.id === selectedGroupId
               );
               if (!selectedGroup) {
@@ -172,6 +175,8 @@ export default function ChatView({
                       memberCount={0}
                       membersLoading={false}
                       onBackClick={handleBackClick}
+                      groups={availableGroups}
+                      onSelectGroup={onSelectGroup}
                     />
                     <div className="flex-1 flex items-center justify-center">
                       <div className="text-center">
@@ -213,6 +218,8 @@ export default function ChatView({
                     memberCount={actualMemberCount}
                     membersLoading={membersLoading}
                     onBackClick={handleBackClick}
+                    groups={availableGroups}
+                    onSelectGroup={onSelectGroup}
                   />
                   <ChatMessages
                     messages={messages}
