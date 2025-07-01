@@ -36,18 +36,26 @@ export function useGroupMembers(groupId: string | null) {
         .select('*, profiles(id, full_name)')
         .eq('group_id', groupId);
       
+      let transformed: GroupMemberWithProfile[] = [];
+      
       if (error) {
         // fallback jika join gagal
-        ({ data, error } = await supabase
+        const fallbackResult = await supabase
           .from('group_members')
           .select('*')
-          .eq('group_id', groupId));
-      }
-      
-      // Transform and deduplicate
-      const seen = new Set();
-      const transformed = (data || [])
-        .map((member: any) => {
+          .eq('group_id', groupId);
+        
+        if (fallbackResult.data) {
+          // Transform fallback data to include profiles
+          transformed = fallbackResult.data.map((member: any) => ({
+            ...member,
+            profiles: window?.profilesCache?.[member.user_id] || 
+              { id: member.user_id, full_name: 'Unknown' }
+          }));
+        }
+      } else if (data) {
+        // Transform successful data
+        transformed = data.map((member: any) => {
           const profileData = member.profiles || 
             (window?.profilesCache?.[member.user_id]) || 
             { id: member.user_id, full_name: 'Unknown' };
@@ -56,14 +64,18 @@ export function useGroupMembers(groupId: string | null) {
             ...member,
             profiles: profileData
           };
-        })
-        .filter((member: any) => {
-          if (seen.has(member.user_id)) return false;
-          seen.add(member.user_id);
-          return true;
-        }) as GroupMemberWithProfile[];
+        });
+      }
       
-      setMembers(transformed);
+      // Deduplicate
+      const seen = new Set();
+      const deduplicated = transformed.filter((member: any) => {
+        if (seen.has(member.user_id)) return false;
+        seen.add(member.user_id);
+        return true;
+      });
+      
+      setMembers(deduplicated);
     } catch (e) {
       setMembers([]);
     } finally {
