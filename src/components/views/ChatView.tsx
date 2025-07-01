@@ -1,3 +1,4 @@
+
 import ChatGroupList from '@/components/chat/ChatGroupList';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatMessages from '@/components/chat/ChatMessages';
@@ -9,6 +10,7 @@ import { useGroupMembers } from '@/hooks/useGroupMembers';
 import { useGroupMessages } from '@/hooks/useGroupMessages';
 import { Phone, User, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import ContactList from '@/components/chat/ContactList';
 
 interface Group {
   id: string;
@@ -116,9 +118,20 @@ export default function ChatView({
     setGroupList(groups);
   }, [groups]);
 
+  // Perbaikan: Jangan auto-select grup saat kembali ke tab grup
   const handleBackClick = () => {
     if (membersLoading) return;
+    // Hapus auto-select grup saat kembali ke daftar
     onSelectGroup(null);
+  };
+
+  // Perbaikan: Jangan auto-select grup saat pindah tab
+  const handleTabChange = (tab: 'group' | 'contact' | 'call') => {
+    setActiveTab(tab);
+    // Jika pindah dari tab grup, clear selected group
+    if (activeTab === 'group' && tab !== 'group') {
+      onSelectGroup(null);
+    }
   };
 
   // Tab Navbar
@@ -135,9 +148,7 @@ export default function ChatView({
         {tabList.map((tab) => (
           <button
             key={tab.key}
-            onClick={() =>
-              setActiveTab(tab.key as 'group' | 'contact' | 'call')
-            }
+            onClick={() => handleTabChange(tab.key as 'group' | 'contact' | 'call')}
             className={`flex-1 flex flex-col items-center py-2 px-1 text-sm font-medium transition-all border-b-2 ${
               activeTab === tab.key
                 ? 'border-blue-500 text-blue-600 bg-blue-50'
@@ -240,9 +251,7 @@ export default function ChatView({
         </>
       )}
       {activeTab === 'contact' && (
-        <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">
-          Fitur kontak coming soon
-        </div>
+        <ContactList />
       )}
       {activeTab === 'call' && (
         <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">

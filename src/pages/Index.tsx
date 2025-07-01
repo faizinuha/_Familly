@@ -53,13 +53,9 @@ const Index = () => {
     fetchJoinedGroups();
   }, [user?.id]);
 
-  // Auto-select first group
-  useEffect(() => {
-    if (groups.length > 0 && !selectedGroupId) {
-      setSelectedGroupId(groups[0].id);
-    }
-  }, [groups, selectedGroupId]);
-
+  // PERBAIKAN: Hapus auto-select grup yang menyebabkan masalah navigasi
+  // Biarkan user memilih grup secara manual
+  
   // Update user activity
   useEffect(() => {
     updateMyStatus(true, `Menggunakan Family - Tab: ${activeTab}`);
@@ -88,7 +84,8 @@ const Index = () => {
           description: `Grup "${newGroupName}" berhasil dibuat`,
         });
         setNewGroupName('');
-        setSelectedGroupId(group.id);
+        // Perbaikan: Hanya set selected group jika user memang ingin langsung masuk
+        // setSelectedGroupId(group.id);
       }
     } catch (error) {
       toast({
@@ -110,7 +107,8 @@ const Index = () => {
           description: `Berhasil bergabung dengan grup "${group.name}"`,
         });
         setInviteCode('');
-        setSelectedGroupId(group.id);
+        // Perbaikan: Hanya set selected group jika user memang ingin langsung masuk
+        // setSelectedGroupId(group.id);
       }
     } catch (error) {
       toast({
