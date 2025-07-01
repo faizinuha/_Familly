@@ -47,7 +47,7 @@ export function useGroupMembers(groupId: string | null) {
         
         if (fallbackResult.data) {
           // Transform fallback data to include profiles
-          transformed = fallbackResult.data.map((member: any) => ({
+          transformed = fallbackResult.data.map((member: Tables<'group_members'>) => ({
             ...member,
             profiles: window?.profilesCache?.[member.user_id] || 
               { id: member.user_id, full_name: 'Unknown' }
