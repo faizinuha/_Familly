@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { useEffect, useRef, useState } from 'react';
@@ -13,7 +14,7 @@ export type GroupMemberWithProfile = Tables<'group_members'> & {
   profiles: {
     id: string;
     full_name: string;
-  } | null;
+  };
 };
 
 export function useGroupMembers(groupId: string | null) {
@@ -34,6 +35,7 @@ export function useGroupMembers(groupId: string | null) {
         .from('group_members')
         .select('*, profiles(id, full_name)')
         .eq('group_id', groupId);
+      
       if (error) {
         // fallback jika join gagal
         ({ data, error } = await supabase
@@ -41,20 +43,18 @@ export function useGroupMembers(groupId: string | null) {
           .select('*')
           .eq('group_id', groupId));
       }
+      
       // Transform and deduplicate
       const seen = new Set();
       const transformed = (data || [])
         .map((member: any) => {
-          if (!member.profiles && window && window.profilesCache) {
-            const profile = window.profilesCache[member.user_id];
-            if (profile) return { ...member, profiles: profile };
-          }
+          const profileData = member.profiles || 
+            (window?.profilesCache?.[member.user_id]) || 
+            { id: member.user_id, full_name: 'Unknown' };
+          
           return {
             ...member,
-            profiles: member.profiles || {
-              id: member.user_id,
-              full_name: 'Unknown',
-            },
+            profiles: profileData
           };
         })
         .filter((member: any) => {
@@ -62,6 +62,7 @@ export function useGroupMembers(groupId: string | null) {
           seen.add(member.user_id);
           return true;
         }) as GroupMemberWithProfile[];
+      
       setMembers(transformed);
     } catch (e) {
       setMembers([]);

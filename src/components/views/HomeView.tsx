@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { Users, Monitor, Bell, Smartphone, Sparkles, Activity } from "lucide-react";
+import { Users, Monitor, Bell, Smartphone, Sparkles, Activity, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useEnhancedDeviceMonitoring } from "@/hooks/useEnhancedDeviceMonitoring";
+import { useGroupMembers } from "@/hooks/useGroupMembers";
 
 interface HomeViewProps {
   profile: any;
@@ -20,122 +21,125 @@ const HomeView: React.FC<HomeViewProps> = ({
 }) => {
   const { getOnlineDevices, activities, getCurrentUserDevices } = useEnhancedDeviceMonitoring();
   
+  // Get members from all groups to filter activities
+  const allGroupMembers = groups.flatMap(group => {
+    const { members } = useGroupMembers(group.id);
+    return members || [];
+  });
+  
+  // Filter activities to only show from group members
+  const groupMemberIds = allGroupMembers.map(member => member.user_id);
+  const filteredActivities = activities.filter(activity => 
+    groupMemberIds.includes(activity.user_id)
+  );
+
   const onlineDevices = getOnlineDevices();
   const currentUserDevices = getCurrentUserDevices();
 
   return (
     <div className="space-y-6 pb-4">
-      {/* Modern Header Welcome */}
-      <div className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white p-8 rounded-2xl shadow-xl overflow-hidden">
-        <div className="absolute inset-0 bg-black/10 backdrop-blur-sm"></div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-              <Sparkles className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Selamat Datang di Good Family!</h1>
-              <p className="opacity-90 text-indigo-100">Halo, {profile?.full_name || user?.email} 👋</p>
-            </div>
+      {/* Header Welcome */}
+      <div className="bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 text-white p-6 rounded-2xl shadow-xl">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+            <Sparkles className="h-6 w-6 text-white" />
           </div>
-          {isHeadOfFamily && (
-            <Badge className="bg-gradient-to-r from-yellow-400 to-orange-400 text-yellow-900 font-semibold border-0 shadow-lg">
-              ✨ Kepala Keluarga
-            </Badge>
-          )}
+          <div>
+            <h1 className="text-xl font-bold">Good Family</h1>
+            <p className="opacity-90">Halo, {profile?.full_name || user?.email} 👋</p>
+          </div>
         </div>
-        <div className="absolute -top-4 -right-4 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
-        <div className="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full blur-2xl"></div>
+        {isHeadOfFamily && (
+          <Badge className="bg-gradient-to-r from-yellow-400 to-orange-400 text-yellow-900 font-semibold border-0">
+            ✨ Kepala Keluarga
+          </Badge>
+        )}
       </div>
 
-
-          
-      {/* Modern Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 border-blue-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-              <Users className="h-6 w-6 text-white" />
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-md transition-all">
+          <CardContent className="p-4 text-center">
+            <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <Users className="h-5 w-5 text-white" />
             </div>
-            <div className="text-3xl font-bold text-blue-700 mb-1">{groups.length}</div>
-            <div className="text-sm font-medium text-blue-600">Grup Keluarga</div>
+            <div className="text-2xl font-bold text-blue-700">{groups.length}</div>
+            <div className="text-sm text-blue-600">Grup Aktif</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-emerald-50 to-green-100 border-emerald-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-              <Monitor className="h-6 w-6 text-white" />
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-md transition-all">
+          <CardContent className="p-4 text-center">
+            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <Monitor className="h-5 w-5 text-white" />
             </div>
-            <div className="text-3xl font-bold text-emerald-700 mb-1">{onlineDevices.length}</div>
-            <div className="text-sm font-medium text-emerald-600">Device Online</div>
-            <div className="text-xs text-emerald-500 mt-1">Semua keluarga</div>
+            <div className="text-2xl font-bold text-green-700">{onlineDevices.length}</div>
+            <div className="text-sm text-green-600">Device Online</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-violet-100 border-purple-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-violet-600 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-              <Smartphone className="h-6 w-6 text-white" />
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-md transition-all">
+          <CardContent className="p-4 text-center">
+            <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <Smartphone className="h-5 w-5 text-white" />
             </div>
-            <div className="text-3xl font-bold text-purple-700 mb-1">{currentUserDevices.length}</div>
-            <div className="text-sm font-medium text-purple-600">Perangkat Saya</div>
-            <div className="text-xs text-purple-500 mt-1">Milik Anda</div>
+            <div className="text-2xl font-bold text-purple-700">{currentUserDevices.length}</div>
+            <div className="text-sm text-purple-600">Device Saya</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-amber-100 border-orange-200 hover:shadow-lg transition-all duration-300 hover:scale-105">
-          <CardContent className="p-6 text-center">
-            <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-amber-500 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg">
-              <Bell className="h-6 w-6 text-white" />
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 hover:shadow-md transition-all">
+          <CardContent className="p-4 text-center">
+            <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <Activity className="h-5 w-5 text-white" />
             </div>
-            <div className="text-3xl font-bold text-orange-700 mb-1">{activities.length}</div>
-            <div className="text-sm font-medium text-orange-600">Aktivitas</div>
+            <div className="text-2xl font-bold text-orange-700">{filteredActivities.length}</div>
+            <div className="text-sm text-orange-600">Aktivitas Grup</div>
           </CardContent>
         </Card>
       </div>
 
-          
-
-          
-
-      {/* Compact Activities Section */}
-      <Card className="shadow-lg border-0 bg-white">
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-100 rounded-t-lg pb-4">
-          <CardTitle className="flex items-center justify-between text-gray-800">
+      {/* Aktivitas Anggota Grup */}
+      <Card className="shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-lg pb-3">
+          <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
                 <Activity className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl">Aktivitas Terbaru</span>
+              <span className="text-lg">Aktivitas Anggota Grup</span>
             </div>
             <Badge variant="secondary" className="text-xs">
-              {activities.length} aktivitas
+              {filteredActivities.length} aktivitas
             </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4">
           <div className="space-y-3">
-            {activities.length > 0 ? (
-              activities.slice(0, 3).map((activity: any, index: number) => (
-                <div key={activity.id || index} className="flex items-center gap-3 p-3 bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg border border-gray-100 hover:shadow-md transition-all duration-200">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-xs shadow-md flex-shrink-0">
-                    {activity.profiles?.full_name?.[0]?.toUpperCase() || activity.user_id?.slice(0, 1)?.toUpperCase() || '?'}
+            {filteredActivities.length > 0 ? (
+              filteredActivities.slice(0, 5).map((activity: any, index: number) => (
+                <div key={activity.id || index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold text-xs">
+                    {activity.profiles?.full_name?.[0]?.toUpperCase() || '?'}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <p className="font-medium text-gray-900 text-sm truncate">{activity.profiles?.full_name || 'Pengguna'}</p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                      <p className="font-medium text-gray-900 text-sm">
+                        {activity.profiles?.full_name || 'Anggota Grup'}
+                      </p>
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <Calendar className="h-3 w-3" />
                         {new Date(activity.timestamp || '').toLocaleString('id-ID', {
                           day: 'numeric',
                           month: 'short',
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
-                      </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-600 mt-1">Menggunakan {activity.app_name}</p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Menggunakan <span className="font-medium text-blue-600">{activity.app_name}</span>
+                    </p>
                   </div>
                 </div>
               ))
@@ -144,15 +148,8 @@ const HomeView: React.FC<HomeViewProps> = ({
                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Activity className="h-6 w-6 text-gray-400" />
                 </div>
-                <p className="text-gray-500 font-medium text-sm">Belum ada aktivitas</p>
-                <p className="text-xs text-gray-400 mt-1">Aktivitas keluarga akan muncul di sini</p>
-              </div>
-            )}
-            {activities.length > 3 && (
-              <div className="text-center pt-2">
-                <Badge variant="outline" className="text-xs cursor-pointer hover:bg-gray-50">
-                  +{activities.length - 3} aktivitas lainnya
-                </Badge>
+                <p className="text-gray-500 font-medium">Belum ada aktivitas anggota grup</p>
+                <p className="text-xs text-gray-400 mt-1">Aktivitas akan muncul ketika anggota grup menggunakan aplikasi</p>
               </div>
             )}
           </div>
