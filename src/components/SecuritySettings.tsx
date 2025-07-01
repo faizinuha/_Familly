@@ -1,9 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Shield, Lock, Fingerprint, Eye } from 'lucide-react';
+import { ArrowLeft, Shield, Lock, Fingerprint, Eye, Smartphone } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { useBiometricAuth } from "@/hooks/useBiometricAuth";
+import { secureStorage } from "@/utils/secureStorage";
 import PinSetupProcess from "./PinSetupProcess";
 
 interface SecuritySettingsProps {
@@ -15,68 +17,84 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
   const [faceIdEnabled, setFaceIdEnabled] = useState(false);
   const [fingerprintEnabled, setFingerprintEnabled] = useState(false);
   const [showPinSetup, setShowPinSetup] = useState(false);
-  const [biometricSupport, setBiometricSupport] = useState({
-    faceId: false,
-    fingerprint: false
-  });
   const { toast } = useToast();
+  const { biometricSupport, authenticateWithBiometric, isNativePlatform } = useBiometricAuth();
 
   useEffect(() => {
-    // Load security settings from localStorage
-    const savedSettings = localStorage.getItem('securitySettings');
-    if (savedSettings) {
-      const settings = JSON.parse(savedSettings);
-      setPinEnabled(settings.pinEnabled || false);
-      setFaceIdEnabled(settings.faceIdEnabled || false);
-      setFingerprintEnabled(settings.fingerprintEnabled || false);
-    }
-
-    // Check biometric support
-    checkBiometricSupport();
+    loadSecuritySettings();
   }, []);
 
-  const checkBiometricSupport = async () => {
-    // Check for Capacitor environment and biometric support
-    const isCapacitor = window.Capacitor?.isNativePlatform();
-    const support = {
-      faceId: isCapacitor ? true : window.navigator.userAgent.includes('iPhone') || window.navigator.userAgent.includes('iPad'),
-      fingerprint: isCapacitor ? true : 'credentials' in navigator
-    };
-    setBiometricSupport(support);
-  };
+  const loadSecuritySettings = async () => {
+    try {
+      // Load PIN settings
+      const pinExists = await secureStorage.getItem('user_pin', true);
+      setPinEnabled(!!pinExists);
 
-  const saveSecuritySettings = (settings: any) => {
-    localStorage.setItem('securitySettings', JSON.stringify(settings));
-  };
-
-  const handlePinToggle = (enabled: boolean) => {
-    if (enabled && !localStorage.getItem('userPin')) {
-      setShowPinSetup(true);
-    } else if (!enabled) {
-      setPinEnabled(false);
-      localStorage.removeItem('userPin');
-      saveSecuritySettings({ pinEnabled: false, faceIdEnabled, fingerprintEnabled });
-      toast({
-        title: "PIN Dinonaktifkan",
-        description: "PIN berhasil dinonaktifkan",
-      });
-    } else {
-      setPinEnabled(enabled);
-      saveSecuritySettings({ pinEnabled: enabled, faceIdEnabled, fingerprintEnabled });
+      // Load biometric settings
+      const biometricSettings = await secureStorage.getBiometricSettings();
+      if (biometricSettings) {
+        setFaceIdEnabled(biometricSettings.faceIdEnabled || false);
+        setFingerprintEnabled(biometricSettings.fingerprintEnabled || false);
+      }
+    } catch (error) {
+      console.error('Error loading security settings:', error);
     }
   };
 
-  const handlePinSetupComplete = () => {
+  const saveBiometricSettings = async (settings: any) => {
+    try {
+      await secureStorage.storeBiometricSettings(settings);
+    } catch (error) {
+      console.error('Error saving biometric settings:', error);
+    }
+  };
+
+  const handlePinToggle = async (enabled: boolean) => {
+    if (enabled && !await secureStorage.getItem('user_pin', true)) {
+      setShowPinSetup(true);
+    } else if (!enabled) {
+      try {
+        await secureStorage.removeItem('user_pin');
+        setPinEnabled(false);
+        toast({
+          title: "PIN Dinonaktifkan",
+          description: "PIN berhasil dinonaktifkan",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Gagal menonaktifkan PIN",
+          variant: "destructive"
+        });
+      }
+    } else {
+      setPinEnabled(enabled);
+    }
+  };
+
+  const handlePinSetupComplete = async () => {
     setPinEnabled(true);
     setShowPinSetup(false);
-    saveSecuritySettings({ pinEnabled: true, faceIdEnabled, fingerprintEnabled });
+    toast({
+      title: "PIN Berhasil Diatur",
+      description: "PIN keamanan telah diaktifkan",
+    });
   };
 
   const handleFaceIdToggle = async (enabled: boolean) => {
+    if (!isNativePlatform) {
+      toast({
+        title: "Face ID Tidak Tersedia",
+        description: "Face ID hanya tersedia di aplikasi mobile. Silakan gunakan aplikasi yang dibangun dengan Capacitor.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (enabled && !biometricSupport.faceId) {
       toast({
         title: "Face ID Tidak Tersedia",
-        description: "Perangkat Anda tidak mendukung Face ID",
+        description: biometricSupport.reason || "Perangkat Anda tidak mendukung Face ID",
         variant: "destructive"
       });
       return;
@@ -84,28 +102,20 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
 
     if (enabled) {
       try {
-        // For Capacitor, use native biometric authentication
-        if (window.Capacitor?.isNativePlatform()) {
-          // In real implementation, use @capacitor/biometric-auth
-          const confirmed = await simulateBiometricAuth('Face ID');
-          if (confirmed) {
-            setFaceIdEnabled(true);
-            saveSecuritySettings({ pinEnabled, faceIdEnabled: true, fingerprintEnabled });
-            toast({
-              title: "Face ID Diaktifkan",
-              description: "Face ID berhasil diaktifkan",
-            });
-          }
+        const result = await authenticateWithBiometric();
+        if (result.success) {
+          setFaceIdEnabled(true);
+          await saveBiometricSettings({ faceIdEnabled: true, fingerprintEnabled });
+          toast({
+            title: "Face ID Diaktifkan",
+            description: "Face ID berhasil diaktifkan",
+          });
         } else {
-          const result = await simulateBiometricAuth('Face ID');
-          if (result) {
-            setFaceIdEnabled(true);
-            saveSecuritySettings({ pinEnabled, faceIdEnabled: true, fingerprintEnabled });
-            toast({
-              title: "Face ID Diaktifkan",
-              description: "Face ID berhasil diaktifkan",
-            });
-          }
+          toast({
+            title: "Gagal Mengaktifkan Face ID",
+            description: result.error || "Autentikasi biometrik gagal",
+            variant: "destructive"
+          });
         }
       } catch (error) {
         toast({
@@ -116,7 +126,7 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
       }
     } else {
       setFaceIdEnabled(false);
-      saveSecuritySettings({ pinEnabled, faceIdEnabled: false, fingerprintEnabled });
+      await saveBiometricSettings({ faceIdEnabled: false, fingerprintEnabled });
       toast({
         title: "Face ID Dinonaktifkan",
         description: "Face ID berhasil dinonaktifkan",
@@ -125,10 +135,19 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
   };
 
   const handleFingerprintToggle = async (enabled: boolean) => {
+    if (!isNativePlatform) {
+      toast({
+        title: "Fingerprint Tidak Tersedia",
+        description: "Fingerprint hanya tersedia di aplikasi mobile. Silakan gunakan aplikasi yang dibangun dengan Capacitor.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (enabled && !biometricSupport.fingerprint) {
       toast({
         title: "Fingerprint Tidak Tersedia",
-        description: "Perangkat Anda tidak mendukung fingerprint",
+        description: biometricSupport.reason || "Perangkat Anda tidak mendukung fingerprint",
         variant: "destructive"
       });
       return;
@@ -136,28 +155,20 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
 
     if (enabled) {
       try {
-        // For Capacitor, use native biometric authentication
-        if (window.Capacitor?.isNativePlatform()) {
-          // In real implementation, use @capacitor/biometric-auth
-          const confirmed = await simulateBiometricAuth('Fingerprint');
-          if (confirmed) {
-            setFingerprintEnabled(true);
-            saveSecuritySettings({ pinEnabled, faceIdEnabled, fingerprintEnabled: true });
-            toast({
-              title: "Fingerprint Diaktifkan",
-              description: "Fingerprint berhasil diaktifkan",
-            });
-          }
+        const result = await authenticateWithBiometric();
+        if (result.success) {
+          setFingerprintEnabled(true);
+          await saveBiometricSettings({ faceIdEnabled, fingerprintEnabled: true });
+          toast({
+            title: "Fingerprint Diaktifkan",
+            description: "Fingerprint berhasil diaktifkan",
+          });
         } else {
-          const result = await simulateBiometricAuth('Fingerprint');
-          if (result) {
-            setFingerprintEnabled(true);
-            saveSecuritySettings({ pinEnabled, faceIdEnabled, fingerprintEnabled: true });
-            toast({
-              title: "Fingerprint Diaktifkan",
-              description: "Fingerprint berhasil diaktifkan",
-            });
-          }
+          toast({
+            title: "Gagal Mengaktifkan Fingerprint",
+            description: result.error || "Autentikasi biometrik gagal",
+            variant: "destructive"
+          });
         }
       } catch (error) {
         toast({
@@ -168,20 +179,12 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
       }
     } else {
       setFingerprintEnabled(false);
-      saveSecuritySettings({ pinEnabled, faceIdEnabled, fingerprintEnabled: false });
+      await saveBiometricSettings({ faceIdEnabled, fingerprintEnabled: false });
       toast({
         title: "Fingerprint Dinonaktifkan",
         description: "Fingerprint berhasil dinonaktifkan",
       });
     }
-  };
-
-  const simulateBiometricAuth = (type: string): Promise<boolean> => {
-    return new Promise((resolve) => {
-      // Simulate biometric authentication dialog
-      const confirmed = window.confirm(`Aktifkan ${type}? Sentuh sensor untuk mengkonfirmasi.`);
-      setTimeout(() => resolve(confirmed), 1000);
-    });
   };
 
   if (showPinSetup) {
@@ -203,6 +206,19 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
       </div>
 
       <div className="space-y-6">
+        {/* Platform Info */}
+        <div className="bg-blue-50 rounded-xl p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <Smartphone className="h-5 w-5 text-blue-600" />
+            <h3 className="font-semibold text-blue-900">Status Platform</h3>
+          </div>
+          <p className="text-sm text-blue-800">
+            {isNativePlatform 
+              ? "Aplikasi mobile - Semua fitur keamanan tersedia" 
+              : "Browser - Fitur biometrik tidak tersedia. Gunakan aplikasi Capacitor untuk akses penuh."}
+          </p>
+        </div>
+
         {/* PIN Security */}
         <div className="bg-white rounded-xl p-6 shadow-md">
           <div className="flex items-center gap-3 mb-4">
@@ -215,7 +231,7 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
                 Aktifkan PIN 6 digit untuk mengamankan aplikasi
               </p>
               {pinEnabled && (
-                <p className="text-xs text-green-600 mt-1">PIN aktif</p>
+                <p className="text-xs text-green-600 mt-1">PIN aktif - Data tersimpan aman</p>
               )}
             </div>
             <Switch
@@ -236,14 +252,18 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
               <p className="text-sm text-gray-600">
                 Gunakan Face ID untuk masuk dengan cepat
               </p>
-              <p className={`text-xs mt-1 ${biometricSupport.faceId ? 'text-green-600' : 'text-red-600'}`}>
-                {biometricSupport.faceId ? 'Tersedia' : 'Tidak tersedia di perangkat ini'}
+              <p className={`text-xs mt-1 ${
+                biometricSupport.faceId && isNativePlatform ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {isNativePlatform 
+                  ? (biometricSupport.faceId ? 'Tersedia' : biometricSupport.reason || 'Tidak tersedia')
+                  : 'Hanya tersedia di aplikasi mobile'}
               </p>
             </div>
             <Switch
               checked={faceIdEnabled}
               onCheckedChange={handleFaceIdToggle}
-              disabled={!biometricSupport.faceId}
+              disabled={!biometricSupport.faceId || !isNativePlatform}
             />
           </div>
         </div>
@@ -259,14 +279,18 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
               <p className="text-sm text-gray-600">
                 Gunakan sidik jari untuk autentikasi
               </p>
-              <p className={`text-xs mt-1 ${biometricSupport.fingerprint ? 'text-green-600' : 'text-red-600'}`}>
-                {biometricSupport.fingerprint ? 'Tersedia' : 'Tidak tersedia di perangkat ini'}
+              <p className={`text-xs mt-1 ${
+                biometricSupport.fingerprint && isNativePlatform ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {isNativePlatform 
+                  ? (biometricSupport.fingerprint ? 'Tersedia' : biometricSupport.reason || 'Tidak tersedia')
+                  : 'Hanya tersedia di aplikasi mobile'}
               </p>
             </div>
             <Switch
               checked={fingerprintEnabled}
               onCheckedChange={handleFingerprintToggle}
-              disabled={!biometricSupport.fingerprint}
+              disabled={!biometricSupport.fingerprint || !isNativePlatform}
             />
           </div>
         </div>
@@ -275,13 +299,14 @@ const SecuritySettings: React.FC<SecuritySettingsProps> = ({ onBack }) => {
         <div className="bg-blue-50 rounded-xl p-6">
           <div className="flex items-center gap-3 mb-2">
             <Shield className="h-5 w-5 text-blue-600" />
-            <h3 className="font-semibold text-blue-900">Tips Keamanan</h3>
+            <h3 className="font-semibold text-blue-900">Tips Keamanan Data</h3>
           </div>
           <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Gunakan PIN yang tidak mudah ditebak</li>
-            <li>• Aktifkan lebih dari satu metode autentikasi</li>
-            <li>• Jangan bagikan PIN Anda kepada siapa pun</li>
-            <li>• Perbarui pengaturan keamanan secara berkala</li>
+            <li>• Data PIN disimpan dengan enkripsi lokal</li>
+            <li>• Fitur biometrik hanya berfungsi di aplikasi native</li>
+            <li>• Gunakan Capacitor build untuk fitur keamanan penuh</li>
+            <li>• Data tidak disimpan di server tanpa enkripsi</li>
+            <li>• Backup otomatis menggunakan enkripsi end-to-end</li>
           </ul>
         </div>
       </div>

@@ -1,7 +1,8 @@
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useBiometricAuth } from '@/hooks/useBiometricAuth';
+import { secureStorage } from '@/utils/secureStorage';
 import { Fingerprint, Shield } from 'lucide-react';
 import React, { useEffect, useState, useRef } from 'react';
 
@@ -19,18 +20,11 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [focused, setFocused] = useState(false);
   const { toast } = useToast();
+  const { authenticateWithBiometric, biometricSupport, isNativePlatform } = useBiometricAuth();
   const hiddenInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Check if biometric is enabled
-    const settings = localStorage.getItem('securitySettings');
-    if (settings) {
-      const securitySettings = JSON.parse(settings);
-      setBiometricEnabled(
-        securitySettings.fingerprintEnabled || securitySettings.faceIdEnabled
-      );
-    }
-
+    checkBiometricAvailability();
     // Focus the hidden input immediately
     if (hiddenInputRef.current) {
       hiddenInputRef.current.focus();
@@ -54,6 +48,20 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [pin]);
 
+  const checkBiometricAvailability = async () => {
+    try {
+      const biometricSettings = await secureStorage.getBiometricSettings();
+      setBiometricEnabled(
+        isNativePlatform && 
+        biometricSupport.available &&
+        biometricSettings && 
+        (biometricSettings.fingerprintEnabled || biometricSettings.faceIdEnabled)
+      );
+    } catch (error) {
+      console.error('Error checking biometric availability:', error);
+    }
+  };
+
   const handlePinInput = (value: string) => {
     if (value.length <= 6 && /^\d*$/.test(value)) {
       setPin(value);
@@ -65,56 +73,67 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
 
   const validatePin = async (inputPin: string) => {
     setLoading(true);
-    const savedPin = localStorage.getItem('userPin');
-
-    if (savedPin === inputPin) {
+    try {
+      const isValid = await secureStorage.verifyPIN(inputPin);
+      
+      if (isValid) {
+        toast({
+          title: 'Berhasil',
+          description: 'PIN benar, mengakses aplikasi...',
+        });
+        setTimeout(() => {
+          onAuthenticated();
+        }, 500);
+      } else {
+        toast({
+          title: 'PIN Salah',
+          description: 'PIN yang Anda masukkan salah',
+          variant: 'destructive',
+        });
+        setPin('');
+        setTimeout(() => {
+          if (hiddenInputRef.current) {
+            hiddenInputRef.current.focus();
+          }
+        }, 100);
+      }
+    } catch (error) {
       toast({
-        title: 'Berhasil',
-        description: 'PIN benar, mengakses aplikasi...',
-      });
-      setTimeout(() => {
-        onAuthenticated();
-      }, 500);
-    } else {
-      toast({
-        title: 'PIN Salah',
-        description: 'PIN yang Anda masukkan salah',
+        title: 'Error',
+        description: 'Gagal memverifikasi PIN',
         variant: 'destructive',
       });
       setPin('');
-      // Refocus after error
-      setTimeout(() => {
-        if (hiddenInputRef.current) {
-          hiddenInputRef.current.focus();
-        }
-      }, 100);
     }
     setLoading(false);
   };
 
   const handleBiometricAuth = async () => {
+    if (!isNativePlatform) {
+      toast({
+        title: "Biometrik Tidak Tersedia",
+        description: "Autentikasi biometrik hanya tersedia di aplikasi mobile",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       setLoading(true);
-
-      // Check if we're in Capacitor environment
-      if (window.Capacitor?.isNativePlatform()) {
-        const confirmed = await simulateBiometricAuth();
-        if (confirmed) {
-          toast({
-            title: 'Berhasil',
-            description: 'Autentikasi biometrik berhasil',
-          });
-          onAuthenticated();
-        }
+      const result = await authenticateWithBiometric();
+      
+      if (result.success) {
+        toast({
+          title: 'Berhasil',
+          description: 'Autentikasi biometrik berhasil',
+        });
+        onAuthenticated();
       } else {
-        const confirmed = await simulateBiometricAuth();
-        if (confirmed) {
-          toast({
-            title: 'Berhasil',
-            description: 'Autentikasi biometrik berhasil',
-          });
-          onAuthenticated();
-        }
+        toast({
+          title: 'Autentikasi Gagal',
+          description: result.error || 'Silakan coba lagi atau gunakan PIN',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       toast({
@@ -125,24 +144,6 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const simulateBiometricAuth = (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      const isSuccess = Math.random() > 0.2;
-      setTimeout(() => {
-        if (isSuccess) {
-          resolve(true);
-        } else {
-          toast({
-            title: 'Autentikasi Gagal',
-            description: 'Silakan coba lagi atau gunakan PIN',
-            variant: 'destructive',
-          });
-          resolve(false);
-        }
-      }, 1500);
-    });
   };
 
   const handlePinBoxClick = () => {
@@ -221,7 +222,7 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
           </div>
 
           {/* Biometric Auth Button */}
-          {biometricEnabled && (
+          {biometricEnabled && isNativePlatform && (
             <div className="flex justify-center">
               <Button
                 variant="outline"
@@ -230,8 +231,16 @@ const PinAuthScreen: React.FC<PinAuthScreenProps> = ({
                 className="flex items-center gap-2"
               >
                 <Fingerprint className="h-4 w-4" />
-                {loading ? 'Memverifikasi...' : 'Gunakan Sidik Jari'}
+                {loading ? 'Memverifikasi...' : 'Gunakan Biometrik'}
               </Button>
+            </div>
+          )}
+
+          {!isNativePlatform && (
+            <div className="text-center">
+              <p className="text-xs text-gray-500">
+                Untuk fitur biometrik penuh, gunakan aplikasi yang dibangun dengan Capacitor
+              </p>
             </div>
           )}
 

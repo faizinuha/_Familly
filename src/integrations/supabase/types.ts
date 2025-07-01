@@ -193,6 +193,13 @@ export type Database = {
             referencedRelation: "family_groups"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "group_members_user_id_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       group_messages: {
