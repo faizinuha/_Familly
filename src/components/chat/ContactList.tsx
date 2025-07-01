@@ -1,11 +1,13 @@
 
 import React, { useState } from 'react';
-import { Phone, MessageCircle, User, Search, UserPlus } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Phone, MessageCircle, User, Search } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import AddContactDialog from './AddContactDialog';
+import ContactChat from './ContactChat';
 
 interface Contact {
   id: string;
@@ -18,7 +20,7 @@ interface Contact {
 }
 
 // Data contoh 3 kontak berbeda
-const sampleContacts: Contact[] = [
+const initialContacts: Contact[] = [
   {
     id: '1',
     name: 'Ayah',
@@ -48,8 +50,9 @@ const sampleContacts: Contact[] = [
 ];
 
 const ContactList: React.FC = () => {
-  const [contacts, setContacts] = useState<Contact[]>(sampleContacts);
+  const [contacts, setContacts] = useState<Contact[]>(initialContacts);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const { toast } = useToast();
 
   // Filter kontak berdasarkan pencarian
@@ -66,10 +69,11 @@ const ContactList: React.FC = () => {
   };
 
   const handleMessage = (contact: Contact) => {
-    toast({
-      title: 'Membuka Chat',
-      description: `Membuka chat dengan ${contact.name}`,
-    });
+    setSelectedContact(contact);
+  };
+
+  const handleAddContact = (newContact: Contact) => {
+    setContacts([...contacts, newContact]);
   };
 
   const getStatusColor = (status: Contact['status']) => {
@@ -85,18 +89,15 @@ const ContactList: React.FC = () => {
     }
   };
 
-  const getStatusText = (status: Contact['status']) => {
-    switch (status) {
-      case 'online':
-        return 'Online';
-      case 'busy':
-        return 'Sibuk';
-      case 'offline':
-        return 'Offline';
-      default:
-        return 'Tidak diketahui';
-    }
-  };
+  // Jika ada kontak yang dipilih, tampilkan chat
+  if (selectedContact) {
+    return (
+      <ContactChat
+        contact={selectedContact}
+        onBack={() => setSelectedContact(null)}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -113,43 +114,37 @@ const ContactList: React.FC = () => {
               className="pl-10 bg-white/20 border-white/30 text-white placeholder-white/70"
             />
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-white hover:bg-white/20 p-2"
-          >
-            <UserPlus className="h-5 w-5" />
-          </Button>
+          <AddContactDialog onContactAdded={handleAddContact} />
         </div>
       </div>
 
       {/* Contact List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {filteredContacts.length > 0 ? (
           filteredContacts.map((contact) => (
-            <Card key={contact.id} className="shadow-md hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-400">
-              <CardContent className="p-4">
+            <Card key={contact.id} className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-400">
+              <CardContent className="p-3">
                 <div className="flex items-center gap-3">
                   {/* Avatar */}
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-2xl shadow-lg">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-lg shadow-md">
                       {contact.avatar}
                     </div>
                     {/* Status indicator */}
-                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${getStatusColor(contact.status)}`}></div>
+                    <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${getStatusColor(contact.status)}`}></div>
                   </div>
 
                   {/* Contact Info */}
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-gray-800">{contact.name}</h3>
+                      <h3 className="font-semibold text-gray-800 text-sm truncate">{contact.name}</h3>
                       {contact.isFamily && (
-                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 px-2 py-0">
                           Keluarga
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-1">{contact.phone}</p>
+                    <p className="text-xs text-gray-600 mb-1 truncate">{contact.phone}</p>
                     <div className="flex items-center gap-2">
                       <span className={`inline-block w-2 h-2 rounded-full ${getStatusColor(contact.status)}`}></span>
                       <span className="text-xs text-gray-500">
@@ -161,14 +156,14 @@ const ContactList: React.FC = () => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex flex-col gap-2">
+                  <div className="flex gap-1">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => handleCall(contact)}
                       className="h-8 w-8 p-0 bg-green-50 hover:bg-green-100 border-green-200"
                     >
-                      <Phone className="h-4 w-4 text-green-600" />
+                      <Phone className="h-3 w-3 text-green-600" />
                     </Button>
                     <Button
                       size="sm"
@@ -176,7 +171,7 @@ const ContactList: React.FC = () => {
                       onClick={() => handleMessage(contact)}
                       className="h-8 w-8 p-0 bg-blue-50 hover:bg-blue-100 border-blue-200"
                     >
-                      <MessageCircle className="h-4 w-4 text-blue-600" />
+                      <MessageCircle className="h-3 w-3 text-blue-600" />
                     </Button>
                   </div>
                 </div>
@@ -191,7 +186,7 @@ const ContactList: React.FC = () => {
             <h3 className="font-semibold text-gray-700 mb-2">
               {searchTerm ? 'Kontak tidak ditemukan' : 'Belum ada kontak'}
             </h3>
-            <p className="text-gray-500 text-center">
+            <p className="text-gray-500 text-center text-sm">
               {searchTerm 
                 ? `Tidak ada kontak yang cocok dengan "${searchTerm}"`
                 : 'Tambahkan kontak untuk mulai berkomunikasi'
