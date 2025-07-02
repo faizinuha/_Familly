@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Users, Shield, Heart } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -134,6 +134,17 @@ const Auth = () => {
                       className="h-12 bg-white/50 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl transition-all duration-200"
                     />
                   </div>
+                  
+                  {/* Forgot Password Link */}
+                  <div className="text-right">
+                    <Link 
+                      to="/forgot-password" 
+                      className="text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                    >
+                      Lupa Password?
+                    </Link>
+                  </div>
+                  
                   <Button 
                     type="submit" 
                     className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]" 

@@ -1,3 +1,4 @@
+
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -7,6 +8,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Auth from './pages/Auth';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 
@@ -64,9 +67,7 @@ const App = () => {
           directory: Directory.External,
           recursive: true,
         });
-        // Folder berhasil dibuat atau sudah ada
       } catch (e) {
-        // Jika folder sudah ada, error akan diabaikan
         if (
           typeof e === 'object' &&
           e &&
@@ -74,7 +75,7 @@ const App = () => {
           typeof (e as { message?: string }).message === 'string' &&
           !(e as { message: string }).message.includes('Directory exists')
         ) {
-          // Anda bisa menambahkan log error di sini jika perlu
+          // Log error if needed
         }
       }
     };
@@ -94,6 +95,22 @@ const App = () => {
                 element={
                   <PublicRoute>
                     <Auth />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/forgot-password"
+                element={
+                  <PublicRoute>
+                    <ForgotPassword />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/reset-password"
+                element={
+                  <PublicRoute>
+                    <ResetPassword />
                   </PublicRoute>
                 }
               />

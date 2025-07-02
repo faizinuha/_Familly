@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { useEffect, useRef, useState } from 'react';
@@ -51,7 +50,11 @@ export function useGroupMessages(groupId: string | null) {
     // Always cleanup previous channel first
     if (channelRef.current) {
       console.log('Cleaning up previous group messages channel');
-      supabase.removeChannel(channelRef.current);
+      try {
+        supabase.removeChannel(channelRef.current);
+      } catch (error) {
+        console.error('Error removing channel:', error);
+      }
       channelRef.current = null;
     }
 
@@ -64,7 +67,7 @@ export function useGroupMessages(groupId: string | null) {
     fetchMessages();
 
     // Create unique channel name to avoid duplicate subscriptions
-    const channelName = `group-messages-${groupId}-${Date.now()}`;
+    const channelName = `group-messages-${groupId}-${user.id}-${Date.now()}`;
     console.log('Creating new group messages channel:', channelName);
     
     try {
@@ -82,10 +85,14 @@ export function useGroupMessages(groupId: string | null) {
             console.log('New group message received:', payload);
             fetchMessages(); // Refetch to get complete data with profiles
           }
-        )
-        .subscribe((status) => {
+        );
+
+      // Only subscribe if channel is not already subscribed
+      if (channel.state !== 'joined' && channel.state !== 'joining') {
+        channel.subscribe((status) => {
           console.log('Group messages channel subscription status:', status);
         });
+      }
 
       channelRef.current = channel;
     } catch (error) {
@@ -95,11 +102,15 @@ export function useGroupMessages(groupId: string | null) {
     return () => {
       if (channelRef.current) {
         console.log('Cleanup group messages channel on unmount');
-        supabase.removeChannel(channelRef.current);
+        try {
+          supabase.removeChannel(channelRef.current);
+        } catch (error) {
+          console.error('Error cleaning up channel:', error);
+        }
         channelRef.current = null;
       }
     };
-  }, [groupId, user?.id]); // Remove fetchMessages from dependencies to avoid infinite loops
+  }, [groupId, user?.id]);
 
   const sendMessage = async (
     message: string,
