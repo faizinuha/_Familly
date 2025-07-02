@@ -1,14 +1,17 @@
+
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Paperclip, Smile, Image, FileText } from 'lucide-react';
+import { Send, Paperclip, Smile } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImageEditor from './ImageEditor';
+import MentionsList from './MentionsList';
 
 interface ChatInputProps {
   onSendMessage: (message: string, fileUrl?: string, fileType?: string, fileName?: string) => Promise<void>;
   onUploadFile?: (file: File) => Promise<{url: string, name: string, type: string} | null>;
   disabled?: boolean;
+  members?: any[]; // For mentions functionality
 }
 
 const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '😢', '😡', '🎉', '🔥', '💯','💔'];
@@ -31,14 +34,19 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ChatInput: React.FC<ChatInputProps> = ({ 
   onSendMessage, 
   onUploadFile,
-  disabled = false 
+  disabled = false,
+  members = []
 }) => {
   const [message, setMessage] = useState('');
   const [showEmojis, setShowEmojis] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showImageEditor, setShowImageEditor] = useState(false);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionSearchTerm, setMentionSearchTerm] = useState('');
+  const [cursorPosition, setCursorPosition] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const handleSend = async () => {
@@ -48,6 +56,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       await onSendMessage(message.trim());
       setMessage('');
     } catch (error) {
+      console.error('Error sending message:', error);
       toast({
         title: "Error",
         description: "Gagal mengirim pesan",
@@ -59,13 +68,68 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+      if (showMentions) {
+        setShowMentions(false);
+        return;
+      }
       handleSend();
     }
+    
+    if (e.key === 'Escape' && showMentions) {
+      setShowMentions(false);
+    }
+  };
+
+  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const position = e.target.selectionStart || 0;
+    
+    setMessage(value);
+    setCursorPosition(position);
+    
+    // Check for @ symbol to trigger mentions
+    const textBeforeCursor = value.substring(0, position);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (mentionMatch && members.length > 0) {
+      setMentionSearchTerm(mentionMatch[1]);
+      setShowMentions(true);
+    } else {
+      setShowMentions(false);
+      setMentionSearchTerm('');
+    }
+  };
+
+  const handleMentionSelect = (member: any) => {
+    const textBeforeCursor = message.substring(0, cursorPosition);
+    const textAfterCursor = message.substring(cursorPosition);
+    
+    // Replace the @ and search term with the mention
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    if (mentionMatch) {
+      const beforeMatch = textBeforeCursor.substring(0, mentionMatch.index);
+      const newMessage = `${beforeMatch}@${member.profiles?.full_name || 'Unknown'} ${textAfterCursor}`;
+      setMessage(newMessage);
+      
+      // Set cursor position after the mention
+      setTimeout(() => {
+        if (inputRef.current) {
+          const newPosition = beforeMatch.length + member.profiles?.full_name?.length + 2 || beforeMatch.length + 9;
+          inputRef.current.setSelectionRange(newPosition, newPosition);
+        }
+      }, 0);
+    }
+    
+    setShowMentions(false);
+    setMentionSearchTerm('');
   };
 
   const handleEmojiClick = (emoji: string) => {
     setMessage(prev => prev + emoji);
     setShowEmojis(false);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   };
 
   const validateFile = (file: File): boolean => {
@@ -93,13 +157,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const sanitizeFileName = (fileName: string): string => {
-    // Remove special characters and replace with safe characters
     return fileName.replace(/[^a-zA-Z0-9.-]/g, '_').substring(0, 100);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !onUploadFile) return;
+
+    console.log('File selected:', file.name, file.type, file.size);
 
     if (!validateFile(file)) {
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -108,6 +173,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
     // If it's an image, show editor
     if (file.type.startsWith('image/')) {
+      console.log('Opening image editor for:', file.name);
       setSelectedImageFile(file);
       setShowImageEditor(true);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -117,6 +183,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     // For non-image files, upload directly
     setUploading(true);
     try {
+      console.log('Uploading non-image file:', file.name);
       const uploadResult = await onUploadFile(file);
       if (uploadResult) {
         const sanitizedName = sanitizeFileName(uploadResult.name);
@@ -127,6 +194,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         });
       }
     } catch (error) {
+      console.error('Error uploading file:', error);
       toast({
         title: "Error",
         description: "Gagal upload file",
@@ -143,6 +211,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
     setUploading(true);
     try {
+      console.log('Uploading edited image:', editedFile.name);
       const uploadResult = await onUploadFile(editedFile);
       if (uploadResult) {
         const sanitizedName = sanitizeFileName(uploadResult.name);
@@ -153,6 +222,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         });
       }
     } catch (error) {
+      console.error('Error uploading edited image:', error);
       toast({
         title: "Error",
         description: "Gagal upload foto",
@@ -166,6 +236,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   return (
     <div className="relative">
+      {/* Mentions List */}
+      <MentionsList
+        members={members}
+        onMentionSelect={handleMentionSelect}
+        visible={showMentions}
+        searchTerm={mentionSearchTerm}
+      />
+
+      {/* Emojis */}
       {showEmojis && (
         <div className="absolute bottom-full left-0 mb-2 p-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
           <div className="grid grid-cols-6 gap-1">
@@ -214,10 +293,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
         </Button>
         
         <Input
+          ref={inputRef}
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleMessageChange}
           onKeyPress={handleKeyPress}
-          placeholder="Ketik pesan..."
+          placeholder="Ketik pesan... (gunakan @ untuk mention)"
           disabled={disabled || uploading}
           className="flex-1 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
           maxLength={1000}

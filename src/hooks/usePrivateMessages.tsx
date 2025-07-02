@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from './useAuth';
@@ -18,14 +19,12 @@ export function usePrivateMessages(contactId: string | null) {
   const [messages, setMessages] = useState<PrivateMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const channelRef = useRef<any>(null);
-
-  // For now, store messages in local state since we don't have private_messages table
-  // In a real app, you'd create a private_messages table in the database
   const [localMessages, setLocalMessages] = useState<PrivateMessage[]>([]);
 
   useEffect(() => {
-    // Cleanup channel on contactId/user change or unmount
+    // Always cleanup previous channel first
     if (channelRef.current) {
+      console.log('Cleaning up previous channel');
       supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
@@ -36,7 +35,6 @@ export function usePrivateMessages(contactId: string | null) {
       return;
     }
 
-    // Load messages for this contact
     setLoading(true);
     
     // Filter messages for this specific contact conversation
@@ -48,29 +46,40 @@ export function usePrivateMessages(contactId: string | null) {
     setMessages(contactMessages);
     setLoading(false);
 
-    // Set up real-time subscription for this contact
-    const channelName = `private-messages-${[user.id, contactId].sort().join('-')}`;
-    const channel = supabase
-      .channel(channelName + '_' + Date.now())
-      .on('broadcast', { event: 'new_message' }, (payload) => {
-        const newMessage = payload.payload as PrivateMessage;
-        if ((newMessage.sender_id === user.id && newMessage.recipient_id === contactId) ||
-            (newMessage.sender_id === contactId && newMessage.recipient_id === user.id)) {
-          setMessages(prev => [...prev, newMessage]);
-          setLocalMessages(prev => [...prev, newMessage]);
-        }
-      })
-      .subscribe();
+    // Create unique channel name to avoid duplicate subscriptions
+    const channelName = `private-${user.id}-${contactId}-${Date.now()}`;
+    console.log('Creating new channel:', channelName);
+    
+    try {
+      const channel = supabase
+        .channel(channelName)
+        .on('broadcast', { event: 'new_message' }, (payload) => {
+          console.log('Received broadcast message:', payload);
+          const newMessage = payload.payload as PrivateMessage;
+          if ((newMessage.sender_id === user.id && newMessage.recipient_id === contactId) ||
+              (newMessage.sender_id === contactId && newMessage.recipient_id === user.id)) {
+            setMessages(prev => [...prev, newMessage]);
+            setLocalMessages(prev => [...prev, newMessage]);
+          }
+        })
+        .subscribe((status) => {
+          console.log('Channel subscription status:', status);
+        });
 
-    channelRef.current = channel;
+      channelRef.current = channel;
+    } catch (error) {
+      console.error('Error setting up channel:', error);
+      setLoading(false);
+    }
 
     return () => {
       if (channelRef.current) {
+        console.log('Cleanup on unmount');
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [contactId, user, localMessages]);
+  }, [contactId, user?.id]); // Remove localMessages from dependency to avoid infinite loops
 
   const sendMessage = async (
     message: string,
@@ -81,7 +90,7 @@ export function usePrivateMessages(contactId: string | null) {
     if (!user || !contactId || (!message.trim() && !fileUrl)) return;
 
     const newMessage: PrivateMessage = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random()}`,
       message: message.trim() || '',
       sender_id: user.id,
       recipient_id: contactId,
@@ -91,17 +100,24 @@ export function usePrivateMessages(contactId: string | null) {
       file_name: fileName,
     };
 
-    // Add to local state
+    console.log('Sending message:', newMessage);
+
+    // Add to local state immediately
     setMessages(prev => [...prev, newMessage]);
     setLocalMessages(prev => [...prev, newMessage]);
 
     // Broadcast to other clients
     if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'new_message',
-        payload: newMessage
-      });
+      try {
+        const result = await channelRef.current.send({
+          type: 'broadcast',
+          event: 'new_message',
+          payload: newMessage
+        });
+        console.log('Broadcast result:', result);
+      } catch (error) {
+        console.error('Error broadcasting message:', error);
+      }
     }
   };
 
@@ -109,6 +125,8 @@ export function usePrivateMessages(contactId: string | null) {
     if (!user || !contactId) return null;
     
     try {
+      console.log('Starting file upload:', file.name, file.type, file.size);
+      
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
       
@@ -116,11 +134,16 @@ export function usePrivateMessages(contactId: string | null) {
         .from('chat-files')
         .upload(fileName, file);
       
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
       
       const { data } = supabase.storage
         .from('chat-files')
         .getPublicUrl(fileName);
+      
+      console.log('File uploaded successfully:', data.publicUrl);
       
       return {
         url: data.publicUrl,

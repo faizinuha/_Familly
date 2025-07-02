@@ -202,7 +202,6 @@ export default function ChatView({
                   </div>
                 );
               }
-              // Jangan render ChatHeader/ChatMessages jika members masih loading atau null
               if (membersLoading) {
                 return (
                   <div className="flex flex-col h-full items-center justify-center">
@@ -242,6 +241,7 @@ export default function ChatView({
                       onSendMessage={handleSendMessage}
                       onUploadFile={handleUploadFile}
                       disabled={messagesLoading}
+                      members={members}
                     />
                   </div>
                 </div>
