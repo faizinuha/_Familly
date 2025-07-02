@@ -205,6 +205,9 @@ export type Database = {
       group_messages: {
         Row: {
           created_at: string | null
+          file_name: string | null
+          file_type: string | null
+          file_url: string | null
           group_id: string
           id: string
           is_system_notification: boolean | null
@@ -215,6 +218,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           group_id: string
           id?: string
           is_system_notification?: boolean | null
@@ -225,6 +231,9 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           group_id?: string
           id?: string
           is_system_notification?: boolean | null

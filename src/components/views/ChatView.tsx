@@ -223,7 +223,7 @@ export default function ChatView({
               }
               const actualMemberCount = members.length;
               return (
-                <>
+                <div className="flex flex-col h-full max-w-md mx-auto">
                   <ChatHeader
                     selectedGroup={selectedGroup}
                     memberCount={actualMemberCount}
@@ -244,7 +244,7 @@ export default function ChatView({
                       disabled={messagesLoading}
                     />
                   </div>
-                </>
+                </div>
               );
             })()
           )}

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, Paperclip, Smile, Image, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import ImageEditor from './ImageEditor';
 
 interface ChatInputProps {
   onSendMessage: (message: string, fileUrl?: string, fileType?: string, fileName?: string) => Promise<void>;
@@ -35,6 +36,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [message, setMessage] = useState('');
   const [showEmojis, setShowEmojis] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showImageEditor, setShowImageEditor] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -103,6 +106,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
       return;
     }
 
+    // If it's an image, show editor
+    if (file.type.startsWith('image/')) {
+      setSelectedImageFile(file);
+      setShowImageEditor(true);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // For non-image files, upload directly
     setUploading(true);
     try {
       const uploadResult = await onUploadFile(file);
@@ -126,6 +138,32 @@ const ChatInput: React.FC<ChatInputProps> = ({
     }
   };
 
+  const handleImageSave = async (editedFile: File) => {
+    if (!onUploadFile) return;
+
+    setUploading(true);
+    try {
+      const uploadResult = await onUploadFile(editedFile);
+      if (uploadResult) {
+        const sanitizedName = sanitizeFileName(uploadResult.name);
+        await onSendMessage('', uploadResult.url, uploadResult.type, sanitizedName);
+        toast({
+          title: "Berhasil",
+          description: "Foto berhasil dikirim"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal upload foto",
+        variant: "destructive"
+      });
+    } finally {
+      setUploading(false);
+      setSelectedImageFile(null);
+    }
+  };
+
   return (
     <div className="relative">
       {showEmojis && (
@@ -144,7 +182,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
       
-      <div className="flex items-center gap-2 p-4 bg-white border-t sticky bottom-0 z-20">
+      <div className="flex items-center gap-2 p-3 sm:p-4 bg-white border-t sticky bottom-0 z-20">
         <input
           type="file"
           ref={fileInputRef}
@@ -159,6 +197,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           size="sm"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading || disabled}
+          className="p-2 shrink-0"
         >
           <Paperclip className="h-4 w-4" />
         </Button>
@@ -169,6 +208,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           size="sm"
           onClick={() => setShowEmojis(!showEmojis)}
           disabled={disabled}
+          className="p-2 shrink-0"
         >
           <Smile className="h-4 w-4" />
         </Button>
@@ -179,7 +219,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           onKeyPress={handleKeyPress}
           placeholder="Ketik pesan..."
           disabled={disabled || uploading}
-          className="flex-1 sticky-bottom-0 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="flex-1 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
           maxLength={1000}
         />
         
@@ -187,10 +227,18 @@ const ChatInput: React.FC<ChatInputProps> = ({
           onClick={handleSend}
           disabled={!message.trim() || disabled || uploading}
           size="sm"
+          className="shrink-0"
         >
           <Send className="h-4 w-4" />
         </Button>
       </div>
+
+      <ImageEditor
+        open={showImageEditor}
+        onOpenChange={setShowImageEditor}
+        imageFile={selectedImageFile}
+        onSave={handleImageSave}
+      />
     </div>
   );
 };
