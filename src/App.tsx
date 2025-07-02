@@ -67,6 +67,22 @@ const App = () => {
           directory: Directory.External,
           recursive: true,
         });
+         // Setelah folder dibuat, buat file version.txt dan readme.txt
+        await Filesystem.writeFile({
+          path: 'Com.Vvi_Studio/version.txt',
+          data: '1.0.0',
+          directory: Directory.External,
+        });
+        await Filesystem.writeFile({
+          path: 'Com.Vvi_Studio/readme.txt',
+          data: 'Ini adalah folder aplikasi.\nSilakan tambahkan file lain sesuai kebutuhan.',
+          directory: Directory.External,
+        });
+        await Filesystem.writeFile({
+          path: 'Com.Vvi_Studio/other/security.txt',
+          data: 'Mohon Tidak Di salah Gunakan karena kami Menjaga Privasi Pengguna.\nJika ada yang ingin di laporkan silahkan hubungi kami di email: rozakadm@gmail.com',
+          directory: Directory.External,
+        });
       } catch (e) {
         if (
           typeof e === 'object' &&
