@@ -22,10 +22,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
+        console.log('Auth event:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Handle new user signup and social login
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Check if this is a new user or social login
+          const isNewUser = session.user.app_metadata.provider !== 'email' || 
+                           event === 'SIGNED_UP';
+          
+          if (isNewUser) {
+            // Send welcome email for new users
+            setTimeout(() => {
+              sendWelcomeEmail(session.user);
+            }, 1000);
+          }
+        }
       }
     );
 
@@ -38,33 +53,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
-  
-const signUp = async (email: string, password: string, fullName: string) => {
-  const redirectUrl = `${window.location.origin}/`;
 
-  const { data, error: signUpError } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: redirectUrl,
-      data: {
-        full_name: fullName
+  const sendWelcomeEmail = async (user: User) => {
+    try {
+      // In production, you would call an edge function to send email
+      console.log(`Welcome email would be sent to: ${user.email}`);
+      
+      // For now, just show a toast notification
+      // This would be replaced with actual email sending logic
+      if (window && 'toast' in window) {
+        // @ts-ignore
+        window.toast({
+          title: "Selamat Datang!",
+          description: `Email selamat datang telah dikirim ke ${user.email}`,
+        });
       }
+    } catch (error) {
+      console.error('Error sending welcome email:', error);
     }
-  });
+  };
+  
+  const signUp = async (email: string, password: string, fullName: string) => {
+    const redirectUrl = `${window.location.origin}/`;
 
-  if (signUpError || !data.user) return { error: signUpError };
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          full_name: fullName
+        }
+      }
+    });
 
-  // 🧠 Insert ke tabel 'profiles' secara manual
-  const { error: profileError } = await supabase.from('profiles').insert({
-    id: data.user.id,
-    full_name: fullName,
-    role: 'member', // atau 'admin' tergantung enum kamu
-  });
+    if (signUpError || !data.user) return { error: signUpError };
 
-  return { error: profileError };
-};
+    // Insert ke tabel 'profiles' secara manual
+    const { error: profileError } = await supabase.from('profiles').insert({
+      id: data.user.id,
+      full_name: fullName,
+      role: 'member',
+    });
 
+    return { error: profileError };
+  };
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({

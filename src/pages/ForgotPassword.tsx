@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Mail, Shield } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, Shield, Copy } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
@@ -17,6 +16,7 @@ const ForgotPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'email' | 'otp' | 'password'>('email');
+  const [generatedOTP, setGeneratedOTP] = useState('');
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -34,21 +34,22 @@ const ForgotPassword = () => {
     setLoading(true);
     try {
       // Generate a random OTP instead of using Supabase reset password
-      const generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+      const newOTP = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedOTP(newOTP);
       
       // Store OTP temporarily in localStorage for demo purposes
       // In production, this should be stored securely on the server
-      localStorage.setItem('temp_otp', generatedOTP);
+      localStorage.setItem('temp_otp', newOTP);
       localStorage.setItem('temp_email', email);
       localStorage.setItem('otp_timestamp', Date.now().toString());
       
       // Simulate email sending (in production, use an email service)
-      console.log(`OTP untuk ${email}: ${generatedOTP}`);
+      console.log(`OTP untuk ${email}: ${newOTP}`);
       
       setStep('otp');
       toast({
         title: "OTP Terkirim!",
-        description: `Kode OTP telah dikirim ke ${email}. Kode: ${generatedOTP} (untuk demo)`,
+        description: `Kode OTP telah dikirim ke ${email}`,
       });
     } catch (error) {
       toast({
@@ -59,6 +60,14 @@ const ForgotPassword = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const copyOTPToClipboard = () => {
+    navigator.clipboard.writeText(generatedOTP);
+    toast({
+      title: "Berhasil!",
+      description: "Kode OTP berhasil disalin",
+    });
   };
 
   const handleVerifyOTP = async (e: React.FormEvent) => {
@@ -221,6 +230,24 @@ const ForgotPassword = () => {
         </p>
       </CardHeader>
       <CardContent>
+        {/* Demo OTP Display */}
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-blue-700 font-medium">Kode OTP: {generatedOTP}</p>
+              <p className="text-xs text-blue-600">Demo - kode untuk testing</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyOTPToClipboard}
+              className="h-8 w-8 p-0"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
         <form onSubmit={handleVerifyOTP} className="space-y-4">
           <div className="space-y-2">
             <Label>Kode OTP</Label>
