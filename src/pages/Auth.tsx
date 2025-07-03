@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -76,7 +77,7 @@ const Auth = () => {
             <Heart className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Good Family
+            Family
           </h1>
           <p className="text-gray-600 mt-2">Terhubung dengan keluarga tercinta</p>
         </div>
