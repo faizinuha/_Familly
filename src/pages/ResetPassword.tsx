@@ -18,18 +18,48 @@ const ResetPassword = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if we have the required tokens for password reset
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
-    
-    if (!accessToken || !refreshToken) {
-      toast({
-        title: "Link Tidak Valid",
-        description: "Link reset password tidak valid atau sudah expired.",
-        variant: "destructive"
-      });
-      navigate('/auth');
-    }
+    // Handle auth tokens from URL parameters
+    const handleAuthTokens = async () => {
+      const accessToken = searchParams.get('access_token');
+      const refreshToken = searchParams.get('refresh_token');
+      const type = searchParams.get('type');
+      
+      if (accessToken && refreshToken && type === 'recovery') {
+        try {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+          
+          if (error) {
+            console.error('Error setting session:', error);
+            toast({
+              title: "Link Tidak Valid",
+              description: "Link reset password tidak valid atau sudah expired.",
+              variant: "destructive"
+            });
+            navigate('/auth');
+          }
+        } catch (error) {
+          console.error('Session error:', error);
+          toast({
+            title: "Error",
+            description: "Terjadi kesalahan saat memverifikasi link.",
+            variant: "destructive"
+          });
+          navigate('/auth');
+        }
+      } else if (!accessToken && !refreshToken) {
+        toast({
+          title: "Link Tidak Valid",
+          description: "Link reset password tidak valid atau sudah expired.",
+          variant: "destructive"
+        });
+        navigate('/auth');
+      }
+    };
+
+    handleAuthTokens();
   }, [searchParams, navigate, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
