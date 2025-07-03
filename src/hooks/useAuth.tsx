@@ -1,12 +1,15 @@
-
-import { useState, useEffect, createContext, useContext } from 'react';
-import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { Session, User } from '@supabase/supabase-js';
+import { createContext, useContext, useEffect, useState } from 'react';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string
+  ) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   loading: boolean;
@@ -21,28 +24,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth event:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth event:', event, session?.user?.email ?? 'No user');
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
 
-        // Handle new user signup and social login
-        if (event === 'SIGNED_IN' && session?.user) {
-          // Check if this is a new user or social login
-          const isNewUser = session.user.app_metadata.provider !== 'email' || 
-                           event === 'SIGNED_UP';
-          
-          if (isNewUser) {
-            // Send welcome email for new users
-            setTimeout(() => {
-              sendWelcomeEmail(session.user);
-            }, 1000);
-          }
+      // Handle new user signup and social login
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Pastikan profile ada untuk semua user (termasuk Google/social)
+        await ensureProfileExists(session.user);
+        // Check if this is a social login (not email)
+        const isSocialLogin =
+          session.user.app_metadata.provider &&
+          session.user.app_metadata.provider !== 'email';
+        if (isSocialLogin) {
+          // Send welcome email for new users (social login)
+          setTimeout(() => {
+            sendWelcomeEmail(session.user);
+          }, 1000);
         }
       }
-    );
+    });
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -58,13 +63,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // In production, you would call an edge function to send email
       console.log(`Welcome email would be sent to: ${user.email}`);
-      
+
       // For now, just show a toast notification
       // This would be replaced with actual email sending logic
       if (window && 'toast' in window) {
-        // @ts-ignore
         window.toast({
-          title: "Selamat Datang!",
+          title: 'Selamat Datang!',
           description: `Email selamat datang telah dikirim ke ${user.email}`,
         });
       }
@@ -72,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error sending welcome email:', error);
     }
   };
-  
+
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
 
@@ -82,9 +86,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       options: {
         emailRedirectTo: redirectUrl,
         data: {
-          full_name: fullName
-        }
-      }
+          full_name: fullName,
+        },
+      },
     });
 
     if (signUpError || !data.user) return { error: signUpError };
@@ -102,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
-      password
+      password,
     });
     return { error };
   };
@@ -111,15 +115,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const ensureProfileExists = async (user: User) => {
+    // Cek apakah profile sudah ada
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+
+    if (!data) {
+      // Insert profile jika belum ada data
+      await supabase.from('profiles').insert({
+        id: user.id,
+        full_name: user.user_metadata?.full_name || user.email,
+        role: 'member',
+      });
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{
-      user,
-      session,
-      signUp,
-      signIn,
-      signOut,
-      loading
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        signUp,
+        signIn,
+        signOut,
+        loading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
