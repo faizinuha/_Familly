@@ -1,4 +1,3 @@
-
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -9,7 +8,6 @@ import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Auth from './pages/Auth';
 import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 
@@ -119,14 +117,6 @@ const App = () => {
                 element={
                   <PublicRoute>
                     <ForgotPassword />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/reset-password"
-                element={
-                  <PublicRoute>
-                    <ResetPassword />
                   </PublicRoute>
                 }
               />
