@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useGroupMembers } from "@/hooks/useGroupMembers";
 
 interface GroupsViewProps {
   groups: any[];
@@ -46,6 +47,33 @@ const GroupsView: React.FC<GroupsViewProps> = ({
       title: "Tersalin!",
       description: "Kode undangan telah disalin ke clipboard",
     });
+  };
+
+  // Component untuk menampilkan anggota grup individual
+  const GroupMembersDisplay = ({ groupId }: { groupId: string }) => {
+    const { members } = useGroupMembers(groupId);
+    
+    return (
+      <div className="bg-gray-50 p-3 rounded-lg">
+        <p className="text-gray-600 font-medium mb-2">Anggota Grup ({members?.length || 0}):</p>
+        <div className="flex flex-wrap gap-2">
+          {members && members.length > 0 ? (
+            members.map((member) => (
+              <div key={member.user_id} className="flex items-center gap-2 bg-white px-3 py-1 rounded-full shadow-sm">
+                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
+                  {member.profiles?.full_name?.[0]?.toUpperCase() || '?'}
+                </div>
+                <span className="text-sm font-medium">
+                  {member.profiles?.full_name || 'Unknown'}
+                </span>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500">Belum ada anggota</p>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -120,7 +148,6 @@ const GroupsView: React.FC<GroupsViewProps> = ({
       <div className="space-y-4">
         {groups.map((group) => {
           const isHeadOfFamily = group.head_of_family_id === user?.id;
-          const members = groupMembers?.filter(m => m.group_id === group.id) || [];
           
           return (
             <Card key={group.id} className="shadow-lg hover:shadow-xl transition-all duration-300 border-2 hover:border-blue-200">
@@ -140,10 +167,6 @@ const GroupsView: React.FC<GroupsViewProps> = ({
                             ✨ Kepala Keluarga
                           </Badge>
                         )}
-                        <Badge variant="outline" className="text-xs">
-                          <Users className="h-3 w-3 mr-1" />
-                          {members.length} anggota
-                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -191,22 +214,8 @@ const GroupsView: React.FC<GroupsViewProps> = ({
                   </div>
                 </div>
 
-                {/* Anggota Grup */}
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <p className="text-gray-600 font-medium mb-2">Anggota Grup:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {members.map((member) => (
-                      <div key={member.user_id} className="flex items-center gap-2 bg-white px-3 py-1 rounded-full shadow-sm">
-                        <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs">
-                          {member.profiles?.full_name?.[0]?.toUpperCase() || '?'}
-                        </div>
-                        <span className="text-sm font-medium">
-                          {member.profiles?.full_name || 'Unknown'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                {/* Anggota Grup - Langsung tampil tanpa perlu klik */}
+                <GroupMembersDisplay groupId={group.id} />
 
                 {/* Tombol Aksi */}
                 <div className="flex gap-2 pt-2">
