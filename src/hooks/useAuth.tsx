@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -21,6 +22,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const sendWelcomeEmail = async (user: User) => {
+    try {
+      // In production, you would call an edge function to send email
+      console.log(`Welcome email would be sent to: ${user.email}`);
+
+      // Show a toast notification
+      toast({
+        title: 'Selamat Datang!',
+        description: `Email selamat datang telah dikirim ke ${user.email}`,
+      });
+    } catch (error) {
+      console.error('Error sending welcome email:', error);
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener
@@ -57,25 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
-
-  const sendWelcomeEmail = async (user: User) => {
-    try {
-      // In production, you would call an edge function to send email
-      console.log(`Welcome email would be sent to: ${user.email}`);
-
-      // For now, just show a toast notification
-      // This would be replaced with actual email sending logic
-      if (window && 'toast' in window) {
-        window.toast({
-          title: 'Selamat Datang!',
-          description: `Email selamat datang telah dikirim ke ${user.email}`,
-        });
-      }
-    } catch (error) {
-      console.error('Error sending welcome email:', error);
-    }
-  };
+  }, [toast]);
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
