@@ -151,13 +151,31 @@ export function useEnhancedDeviceMonitoring() {
     if (!user || !deviceInfo) return;
 
     try {
-      // Check if device already exists
-      const { data: existingDevice } = await supabase
+      // Sanitize device name to avoid query issues
+      const sanitizedDeviceName = deviceInfo.deviceName.replace(/[^\w\s-]/g, '').trim() || 'Unknown Device';
+      
+      console.log('Registering device:', { 
+        user_id: user.id, 
+        device_name: sanitizedDeviceName,
+        original_name: deviceInfo.deviceName 
+      });
+
+      // Use a more robust query approach - search by user_id first
+      const { data: existingDevices, error: searchError } = await supabase
         .from('devices')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('device_name', deviceInfo.deviceName)
-        .single();
+        .select('id, device_name')
+        .eq('user_id', user.id);
+
+      if (searchError) {
+        console.error('Error searching devices:', searchError);
+        throw searchError;
+      }
+
+      // Find matching device by name comparison
+      const existingDevice = existingDevices?.find(d => 
+        d.device_name === sanitizedDeviceName || 
+        d.device_name === deviceInfo.deviceName
+      );
 
       if (existingDevice) {
         // Update existing device
@@ -167,36 +185,44 @@ export function useEnhancedDeviceMonitoring() {
             status: 'online',
             last_seen: new Date().toISOString(),
             device_type: deviceInfo.platform,
-            current_app: 'Good Family App',
+            current_app: 'Family App',
             updated_at: new Date().toISOString()
           })
           .eq('id', existingDevice.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating device:', error);
+          throw error;
+        }
         setCurrentDeviceId(existingDevice.id);
+        console.log('Device updated successfully:', existingDevice.id);
       } else {
         // Register new device
         const { data, error } = await supabase
           .from('devices')
           .insert({
             user_id: user.id,
-            device_name: deviceInfo.deviceName,
+            device_name: sanitizedDeviceName,
             device_type: deviceInfo.platform,
             status: 'online',
-            current_app: 'Good Family App',
+            current_app: 'Family App',
             last_seen: new Date().toISOString()
           })
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error inserting device:', error);
+          throw error;
+        }
         setCurrentDeviceId(data.id);
+        console.log('New device registered:', data.id);
       }
 
       // Log initial activity
-      await logActivity('Good Family App', 'app_start');
+      await logActivity('Family App', 'app_start');
     } catch (error) {
-      console.error('Error registering device:', error);
+      console.error('Error in registerOrUpdateDevice:', error);
     }
   };
 
@@ -210,8 +236,12 @@ export function useEnhancedDeviceMonitoring() {
         `)
         .order('last_seen', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching devices:', error);
+        throw error;
+      }
       setDevices(data || []);
+      console.log('Devices fetched successfully:', data?.length || 0);
     } catch (error) {
       console.error('Error fetching devices:', error);
       setDevices([]);
@@ -231,8 +261,12 @@ export function useEnhancedDeviceMonitoring() {
         .order('timestamp', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching activities:', error);
+        throw error;
+      }
       setActivities(data || []);
+      console.log('Activities fetched successfully:', data?.length || 0);
     } catch (error) {
       console.error('Error fetching activities:', error);
       setActivities([]);
@@ -245,13 +279,16 @@ export function useEnhancedDeviceMonitoring() {
         .from('devices')
         .update({
           status,
-          current_app: currentApp || 'Good Family App',
+          current_app: currentApp || 'Family App',
           last_seen: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .eq('id', deviceId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating device status:', error);
+        throw error;
+      }
     } catch (error) {
       console.error('Error updating device status:', error);
     }
@@ -271,7 +308,10 @@ export function useEnhancedDeviceMonitoring() {
           duration_minutes: durationMinutes
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error logging activity:', error);
+        throw error;
+      }
     } catch (error) {
       console.error('Error logging activity:', error);
     }
@@ -281,7 +321,7 @@ export function useEnhancedDeviceMonitoring() {
     if (!user) return;
     
     // Log current app usage
-    await logActivity('Good Family App', 'active_usage', 2);
+    await logActivity('Family App', 'active_usage', 2);
   };
 
   const getOnlineDevices = () => {
