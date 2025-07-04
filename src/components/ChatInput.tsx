@@ -1,8 +1,7 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Paperclip, Smile } from 'lucide-react';
+import { Send, Paperclip, Smile, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ImageEditor from './ImageEditor';
 import MentionsList from './MentionsList';
@@ -11,20 +10,14 @@ interface ChatInputProps {
   onSendMessage: (message: string, fileUrl?: string, fileType?: string, fileName?: string) => Promise<void>;
   onUploadFile?: (file: File) => Promise<{url: string, name: string, type: string} | null>;
   disabled?: boolean;
-  members?: any[]; // For mentions functionality
+  members?: any[];
 }
 
-const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '😢', '😡', '🎉', '🔥', '💯','💔'];
+const emojis = ['😀', '😂', '😍', '🤔', '👍', '👎', '❤️', '😢', '😡', '🎉', '🔥', '💯'];
 
-// File type whitelist for security
 const ALLOWED_FILE_TYPES = [
-  'image/jpeg',
-  'image/jpg', 
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'application/pdf',
-  'text/plain',
+  'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+  'application/pdf', 'text/plain',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ];
@@ -49,7 +42,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!message.trim()) return;
     
     try {
@@ -63,9 +56,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
         variant: "destructive"
       });
     }
-  };
+  }, [message, onSendMessage, toast]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (showMentions) {
@@ -78,7 +71,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     if (e.key === 'Escape' && showMentions) {
       setShowMentions(false);
     }
-  };
+  }, [showMentions, handleSend]);
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -87,7 +80,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
     setMessage(value);
     setCursorPosition(position);
     
-    // Check for @ symbol to trigger mentions
     const textBeforeCursor = value.substring(0, position);
     const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
     
@@ -104,14 +96,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
     const textBeforeCursor = message.substring(0, cursorPosition);
     const textAfterCursor = message.substring(cursorPosition);
     
-    // Replace the @ and search term with the mention
     const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
     if (mentionMatch) {
       const beforeMatch = textBeforeCursor.substring(0, mentionMatch.index);
       const newMessage = `${beforeMatch}@${member.profiles?.full_name || 'Unknown'} ${textAfterCursor}`;
       setMessage(newMessage);
       
-      // Set cursor position after the mention
       setTimeout(() => {
         if (inputRef.current) {
           const newPosition = beforeMatch.length + member.profiles?.full_name?.length + 2 || beforeMatch.length + 9;
@@ -133,7 +123,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const validateFile = (file: File): boolean => {
-    // Check file type
     if (!ALLOWED_FILE_TYPES.includes(file.type)) {
       toast({
         title: "Error",
@@ -143,7 +132,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
       return false;
     }
 
-    // Check file size
     if (file.size > MAX_FILE_SIZE) {
       toast({
         title: "Error",
@@ -164,26 +152,20 @@ const ChatInput: React.FC<ChatInputProps> = ({
     const file = e.target.files?.[0];
     if (!file || !onUploadFile) return;
 
-    console.log('File selected:', file.name, file.type, file.size);
-
     if (!validateFile(file)) {
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
-    // If it's an image, show editor
     if (file.type.startsWith('image/')) {
-      console.log('Opening image editor for:', file.name);
       setSelectedImageFile(file);
       setShowImageEditor(true);
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
-    // For non-image files, upload directly
     setUploading(true);
     try {
-      console.log('Uploading non-image file:', file.name);
       const uploadResult = await onUploadFile(file);
       if (uploadResult) {
         const sanitizedName = sanitizeFileName(uploadResult.name);
@@ -211,7 +193,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
     setUploading(true);
     try {
-      console.log('Uploading edited image:', editedFile.name);
       const uploadResult = await onUploadFile(editedFile);
       if (uploadResult) {
         const sanitizedName = sanitizeFileName(uploadResult.name);
@@ -236,7 +217,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   return (
     <div className="relative">
-      {/* Mentions List */}
       <MentionsList
         members={members}
         onMentionSelect={handleMentionSelect}
@@ -244,15 +224,25 @@ const ChatInput: React.FC<ChatInputProps> = ({
         searchTerm={mentionSearchTerm}
       />
 
-      {/* Emojis */}
       {showEmojis && (
-        <div className="absolute bottom-full left-0 mb-2 p-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+        <div className="absolute bottom-full left-0 mb-2 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-10 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Emoji</span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowEmojis(false)}
+              className="h-5 w-5 p-0"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
           <div className="grid grid-cols-6 gap-1">
             {emojis.map((emoji, index) => (
               <button
                 key={index}
                 onClick={() => handleEmojiClick(emoji)}
-                className="p-1 hover:bg-gray-100 rounded text-lg"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-lg transition-colors"
               >
                 {emoji}
               </button>
@@ -261,56 +251,58 @@ const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
       
-      <div className="flex items-center gap-2 p-3 sm:p-4 bg-white border-t sticky bottom-0 z-20">
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileUpload}
-          accept="image/*,.pdf,.doc,.docx,.txt"
-          className="hidden"
-        />
-        
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading || disabled}
-          className="p-2 shrink-0"
-        >
-          <Paperclip className="h-4 w-4" />
-        </Button>
-        
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowEmojis(!showEmojis)}
-          disabled={disabled}
-          className="p-2 shrink-0"
-        >
-          <Smile className="h-4 w-4" />
-        </Button>
-        
-        <Input
-          ref={inputRef}
-          value={message}
-          onChange={handleMessageChange}
-          onKeyPress={handleKeyPress}
-          placeholder="Ketik pesan... (gunakan @ untuk mention)"
-          disabled={disabled || uploading}
-          className="flex-1 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-          maxLength={1000}
-        />
-        
-        <Button
-          onClick={handleSend}
-          disabled={!message.trim() || disabled || uploading}
-          size="sm"
-          className="shrink-0"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+      <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-3">
+        <div className="flex items-end gap-2 bg-gray-50 dark:bg-gray-800 rounded-2xl p-2 border border-gray-200 dark:border-gray-700">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept="image/*,.pdf,.doc,.docx,.txt"
+            className="hidden"
+          />
+          
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || disabled}
+            className="p-2 h-8 w-8 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
+          
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowEmojis(!showEmojis)}
+            disabled={disabled}
+            className="p-2 h-8 w-8 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
+          >
+            <Smile className="h-4 w-4" />
+          </Button>
+          
+          <Input
+            ref={inputRef}
+            value={message}
+            onChange={handleMessageChange}
+            onKeyPress={handleKeyPress}
+            placeholder="Ketik pesan..."
+            disabled={disabled || uploading}
+            className="flex-1 bg-transparent border-0 focus-visible:ring-0 text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500"
+            maxLength={1000}
+          />
+          
+          <Button
+            onClick={handleSend}
+            disabled={!message.trim() || disabled || uploading}
+            size="sm"
+            className="h-8 w-8 p-0 bg-blue-500 hover:bg-blue-600 text-white rounded-full"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <ImageEditor
