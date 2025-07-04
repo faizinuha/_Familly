@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Smartphone, Bell, Wifi, Users, Activity, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useGroupMembers } from "@/hooks/useGroupMembers";
 
 interface MonitoringViewProps {
   devices: any[];
@@ -17,92 +17,33 @@ const MonitoringView: React.FC<MonitoringViewProps> = ({
   devices,
   isHeadOfFamily,
   onSendNotification,
-  groups
+  groups,
+  selectedGroupId
 }) => {
-  const [allDevices, setAllDevices] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    const fetchAllDevices = async () => {
-      if (groups.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Ambil semua anggota dari semua grup
-        const { data: allGroupMembers } = await import('@/integrations/supabase/client').then(
-          ({ supabase }) =>
-            supabase
-              .from('group_members')
-              .select(`
-                user_id,
-                group_id,
-                profiles!inner(*)
-              `)
-              .in('group_id', groups.map(g => g.id))
-        );
-
-        if (allGroupMembers) {
-          const memberIds = allGroupMembers.map(member => member.user_id);
-          
-          // Ambil semua device dari anggota grup
-          const { data: allDevicesData } = await import('@/integrations/supabase/client').then(
-            ({ supabase }) =>
-              supabase
-                .from('devices')
-                .select(`
-                  *,
-                  profiles!inner(*)
-                `)
-                .in('user_id', memberIds)
-                .order('last_seen', { ascending: false })
-          );
-
-          // Filter unique devices dan tambah info grup
-          const uniqueDevices = new Map();
-          (allDevicesData || []).forEach(device => {
-            const key = `${device.user_id}_${device.device_name}`;
-            const existing = uniqueDevices.get(key);
-            
-            if (!existing || new Date(device.last_seen || '') > new Date(existing.last_seen || '')) {
-              // Tambah info grup untuk device ini
-              const userGroups = groups.filter(group => 
-                allGroupMembers.some(member => 
-                  member.user_id === device.user_id && member.group_id === group.id
-                )
-              );
-              uniqueDevices.set(key, { ...device, userGroups });
-            }
-          });
-
-          setAllDevices(Array.from(uniqueDevices.values()));
+  const { members: groupMembers } = useGroupMembers(selectedGroupId);
+  
+  // Filter devices to only show unique devices from current group members
+  const filteredDevices = React.useMemo(() => {
+    if (!groupMembers || groupMembers.length === 0) return [];
+    
+    // Get unique devices by device_name and user_id combination
+    const uniqueDevices = new Map();
+    
+    devices.forEach(device => {
+      const isMember = groupMembers.some(member => member.user_id === device.user_id);
+      if (isMember) {
+        const key = `${device.user_id}_${device.device_name}`;
+        const existing = uniqueDevices.get(key);
+        
+        // Keep the most recent device entry
+        if (!existing || new Date(device.last_seen || '') > new Date(existing.last_seen || '')) {
+          uniqueDevices.set(key, device);
         }
-      } catch (error) {
-        console.error('Error fetching devices:', error);
-      } finally {
-        setLoading(false);
       }
-    };
-
-    fetchAllDevices();
-  }, [groups]);
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-2xl shadow-xl">
-          <h2 className="text-2xl font-bold mb-2">Monitoring Device</h2>
-          <p className="opacity-90">Memuat data device...</p>
-        </div>
-        <div className="animate-pulse space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="bg-gray-200 h-32 rounded-lg"></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+    });
+    
+    return Array.from(uniqueDevices.values());
+  }, [devices, groupMembers]);
 
   return (
     <div className="space-y-6">
@@ -116,24 +57,36 @@ const MonitoringView: React.FC<MonitoringViewProps> = ({
             </Badge>
           )}
         </div>
-        <p className="opacity-90 mb-4">Pantau semua device anggota grup secara real-time</p>
+        <p className="opacity-90 mb-4">Pantau device anggota grup secara real-time</p>
         
-        <div className="flex items-center gap-4 text-sm opacity-90">
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            <span>{groups.length} Grup Aktif</span>
+        {selectedGroupId && (
+          <div className="flex items-center gap-4 text-sm opacity-90">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span>Grup: {groups.find(g => g.id === selectedGroupId)?.name || 'Unknown'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-4 w-4" />
+              <span>{filteredDevices.length} Device Aktif</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Smartphone className="h-4 w-4" />
-            <span>{allDevices.length} Device Terpantau</span>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Device List dari Semua Grup */}
+      {!selectedGroupId && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-6 text-center">
+            <Users className="h-12 w-12 text-blue-500 mx-auto mb-3" />
+            <p className="text-blue-800 font-medium">Pilih grup untuk monitoring</p>
+            <p className="text-sm text-blue-600 mt-1">Device monitoring akan menampilkan perangkat dari anggota grup yang dipilih</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Device List */}
       <div className="space-y-4">
-        {allDevices.length > 0 ? (
-          allDevices.map((device) => {
+        {filteredDevices.length > 0 ? (
+          filteredDevices.map((device) => {
             const isOnline = device.status === 'online' && 
               new Date(device.last_seen || '') > new Date(Date.now() - 5 * 60 * 1000);
             
@@ -154,14 +107,6 @@ const MonitoringView: React.FC<MonitoringViewProps> = ({
                           <Badge variant={isOnline ? "default" : "secondary"} className="text-xs">
                             {isOnline ? "Online" : "Offline"}
                           </Badge>
-                        </div>
-                        {/* Tampilkan grup tempat user ini berada */}
-                        <div className="flex gap-1 mt-1">
-                          {device.userGroups?.map((group: any) => (
-                            <Badge key={group.id} variant="outline" className="text-xs">
-                              {group.name}
-                            </Badge>
-                          ))}
                         </div>
                       </div>
                     </div>
@@ -223,10 +168,10 @@ const MonitoringView: React.FC<MonitoringViewProps> = ({
                 <Smartphone className="h-8 w-8 text-gray-400" />
               </div>
               <h3 className="font-semibold text-lg text-gray-700 mb-2">
-                Belum Ada Device Terpantau
+                {selectedGroupId ? 'Belum Ada Device Terpantau' : 'Pilih Grup untuk Monitoring'}
               </h3>
               <p className="text-gray-500">
-                Device akan muncul ketika anggota grup online dan menggunakan aplikasi
+                {selectedGroupId ? 'Device akan muncul ketika anggota grup online' : 'Monitoring menampilkan device dari anggota grup'}
               </p>
             </CardContent>
           </Card>
