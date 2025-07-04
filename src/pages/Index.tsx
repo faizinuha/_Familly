@@ -1,3 +1,4 @@
+
 import Header from '@/components/Header';
 import Navigation from '@/components/Navigation';
 import PinAuthScreen from '@/components/PinAuthScreen';
@@ -263,7 +264,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <Header />
 
       <div className="flex-1 pb-20">
