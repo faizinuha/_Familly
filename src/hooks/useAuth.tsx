@@ -23,20 +23,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasShownWelcome, setHasShownWelcome] = useState(false);
   const { toast } = useToast();
 
-  const sendWelcomeEmail = async (user: User) => {
+  const showWelcomeMessage = async (user: User) => {
     try {
-      // In production, you would call an edge function to send email
-      console.log(`Welcome email would be sent to: ${user.email}`);
+      // Ambil data profile untuk mendapatkan nama lengkap
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
 
-      // Show a toast notification
+      const userName = profile?.full_name || 
+        user.user_metadata?.full_name || 
+        user.user_metadata?.name || 
+        user.email?.split('@')[0] || 
+        'User';
+
+      // Tampilkan toast selamat datang
       toast({
-        title: 'Selamat Datang!',
-        description: `Email selamat datang telah dikirim ke ${user.email}`,
+        title: `Selamat datang ${userName}!`,
+        description: `Senang melihat Anda kembali di Family App`,
+        duration: 5000,
       });
     } catch (error) {
-      console.error('Error sending welcome email:', error);
+      console.error('Error showing welcome message:', error);
     }
   };
 
@@ -50,20 +62,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
 
     // Handle berbagai event auth
-    if (event === 'SIGNED_IN' && session?.user) {
+    if (event === 'SIGNED_IN' && session?.user && !hasShownWelcome) {
       // Pastikan profile ada untuk semua user (termasuk Google/social)
       setTimeout(async () => {
         try {
           await ensureProfileExists(session.user);
           
-          // Check if this is a social login (not email)
-          const isSocialLogin = session.user.app_metadata.provider && 
-            session.user.app_metadata.provider !== 'email';
-            
-          if (isSocialLogin) {
-            // Send welcome email for new users (social login)
-            sendWelcomeEmail(session.user);
-          }
+          // Tampilkan pesan selamat datang hanya sekali per session
+          await showWelcomeMessage(session.user);
+          setHasShownWelcome(true);
+          
         } catch (error) {
           console.error('Error in post-login processing:', error);
         }
@@ -82,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('User signed out');
       setSession(null);
       setUser(null);
+      setHasShownWelcome(false); // Reset welcome flag saat logout
     }
   };
 
@@ -122,6 +131,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(session);
           setUser(session?.user ?? null);
           setLoading(false);
+
+          // Jika ada session existing, tampilkan welcome message
+          if (session?.user && !hasShownWelcome) {
+            setTimeout(async () => {
+              await showWelcomeMessage(session.user);
+              setHasShownWelcome(true);
+            }, 1000);
+          }
         }
       } catch (error) {
         console.error('Error checking session:', error);
@@ -185,6 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      setHasShownWelcome(false); // Reset welcome flag sebelum logout
       await supabase.auth.signOut();
     } catch (error) {
       console.error('Error in signOut:', error);
