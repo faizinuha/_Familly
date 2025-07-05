@@ -17,17 +17,27 @@ import Navigation from '@/components/Navigation';
 import Header from '@/components/Header';
 import { useFamilyGroups } from '@/hooks/useFamilyGroups';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { useProfile } from '@/hooks/useProfile';
+import { useEnhancedDeviceMonitoring } from '@/hooks/useEnhancedDeviceMonitoring';
+import { useToast } from '@/hooks/use-toast';
 
 export type ViewType = 'home' | 'chat' | 'groups' | 'monitoring' | 'enhanced-monitoring' | 'settings';
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const { groups } = useFamilyGroups();
+  const { groups, createGroup, joinGroup, deleteGroup, leaveGroup } = useFamilyGroups();
   const [activeView, setActiveView] = useState<ViewType>('home');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const { isDarkMode } = useDarkMode();
+  const { profile } = useProfile();
+  const { devices, sendNotification } = useEnhancedDeviceMonitoring();
+  const { toast } = useToast();
+
+  // Group creation/management state
+  const [newGroupName, setNewGroupName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
 
   // Check if user has seen onboarding
   useEffect(() => {
@@ -45,6 +55,94 @@ const Index = () => {
     localStorage.setItem('hasSeenOnboarding', 'true');
     setShowOnboarding(false);
     setShowAuth(true);
+  };
+
+  const isHeadOfFamily = groups.some(group => group.head_of_family_id === user?.id);
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return;
+    
+    try {
+      await createGroup(newGroupName);
+      setNewGroupName('');
+      toast({
+        title: "Sukses",
+        description: "Grup berhasil dibuat",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal membuat grup",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleJoinGroup = async () => {
+    if (!inviteCode.trim()) return;
+    
+    try {
+      await joinGroup(inviteCode);
+      setInviteCode('');
+      toast({
+        title: "Sukses",
+        description: "Berhasil bergabung dengan grup",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal bergabung dengan grup",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
+    try {
+      await deleteGroup(groupId);
+      toast({
+        title: "Sukses",
+        description: "Grup berhasil dihapus",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal menghapus grup",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLeaveGroup = async (groupId: string) => {
+    try {
+      await leaveGroup(groupId);
+      toast({
+        title: "Sukses",
+        description: "Berhasil keluar dari grup",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal keluar dari grup",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSendNotification = async (message: string) => {
+    try {
+      await sendNotification(message);
+      toast({
+        title: "Sukses",
+        description: "Notifikasi berhasil dikirim",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Gagal mengirim notifikasi",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -73,14 +171,12 @@ const Index = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
         {/* Hero Section */}
         <div className="relative overflow-hidden">
-          {/* Background decorations */}
           <div className="absolute inset-0">
             <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl"></div>
             <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-pink-400/20 to-orange-600/20 rounded-full blur-3xl"></div>
           </div>
           
           <div className="relative container mx-auto px-4 py-16">
-            {/* Header */}
             <div className="text-center mb-16">
               <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-3xl shadow-xl mb-6 animate-bounce">
                 <Heart className="w-10 h-10 text-white" />
@@ -110,7 +206,6 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Features Grid */}
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
               <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
                 <CardContent className="p-6 text-center">
@@ -161,7 +256,14 @@ const Index = () => {
   const renderActiveView = () => {
     switch (activeView) {
       case 'home':
-        return <HomeView />;
+        return (
+          <HomeView 
+            profile={profile}
+            user={user}
+            isHeadOfFamily={isHeadOfFamily}
+            groups={groups}
+          />
+        );
       case 'chat':
         return (
           <ChatView
@@ -171,15 +273,45 @@ const Index = () => {
           />
         );
       case 'groups':
-        return <GroupsView />;
+        return (
+          <GroupsView 
+            groups={groups}
+            user={user}
+            groupMembers={[]}
+            newGroupName={newGroupName}
+            setNewGroupName={setNewGroupName}
+            inviteCode={inviteCode}
+            setInviteCode={setInviteCode}
+            onCreateGroup={handleCreateGroup}
+            onJoinGroup={handleJoinGroup}
+            onDeleteGroup={handleDeleteGroup}
+            onSelectGroup={setSelectedGroupId}
+            onLeaveGroup={handleLeaveGroup}
+          />
+        );
       case 'monitoring':
-        return <MonitoringView />;
+        return (
+          <MonitoringView 
+            devices={devices}
+            isHeadOfFamily={isHeadOfFamily}
+            onSendNotification={handleSendNotification}
+            groups={groups}
+            selectedGroupId={selectedGroupId}
+          />
+        );
       case 'enhanced-monitoring':
         return <EnhancedMonitoringView />;
       case 'settings':
         return <SettingsView />;
       default:
-        return <HomeView />;
+        return (
+          <HomeView 
+            profile={profile}
+            user={user}
+            isHeadOfFamily={isHeadOfFamily}
+            groups={groups}
+          />
+        );
     }
   };
 
@@ -191,7 +323,11 @@ const Index = () => {
           <main className="flex-1 overflow-y-auto">
             {renderActiveView()}
           </main>
-          <Navigation activeView={activeView} onViewChange={setActiveView} />
+          <Navigation 
+            activeTab={activeView} 
+            onTabChange={setActiveView} 
+            isHeadOfFamily={isHeadOfFamily} 
+          />
         </div>
       </div>
     </div>
