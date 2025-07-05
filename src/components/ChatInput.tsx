@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -216,101 +217,103 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="relative">
-      <MentionsList
-        members={members}
-        onMentionSelect={handleMentionSelect}
-        visible={showMentions}
-        searchTerm={mentionSearchTerm}
-      />
+    <div className="sticky bottom-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg">
+      <div className="relative">
+        <MentionsList
+          members={members}
+          onMentionSelect={handleMentionSelect}
+          visible={showMentions}
+          searchTerm={mentionSearchTerm}
+        />
 
-      {showEmojis && (
-        <div className="absolute bottom-full left-0 mb-2 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-10 backdrop-blur-sm">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Emoji</span>
+        {showEmojis && (
+          <div className="absolute bottom-full left-4 mb-2 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-10 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Emoji</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowEmojis(false)}
+                className="h-5 w-5 p-0"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-6 gap-1">
+              {emojis.map((emoji, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleEmojiClick(emoji)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-lg transition-colors"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        <div className="p-4">
+          <div className="flex items-end gap-3 bg-gray-50 dark:bg-gray-800 rounded-2xl p-3 border border-gray-200 dark:border-gray-700 max-w-4xl mx-auto">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              className="hidden"
+            />
+            
             <Button
-              size="sm"
+              type="button"
               variant="ghost"
-              onClick={() => setShowEmojis(false)}
-              className="h-5 w-5 p-0"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || disabled}
+              className="p-2 h-10 w-10 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200"
             >
-              <X className="h-3 w-3" />
+              <Paperclip className="h-5 w-5" />
+            </Button>
+            
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowEmojis(!showEmojis)}
+              disabled={disabled}
+              className="p-2 h-10 w-10 text-gray-500 dark:text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-xl transition-all duration-200"
+            >
+              <Smile className="h-5 w-5" />
+            </Button>
+            
+            <Input
+              ref={inputRef}
+              value={message}
+              onChange={handleMessageChange}
+              onKeyPress={handleKeyPress}
+              placeholder="Ketik pesan..."
+              disabled={disabled || uploading}
+              className="flex-1 bg-transparent border-0 focus-visible:ring-0 text-base placeholder:text-gray-400 dark:placeholder:text-gray-500 h-10"
+              maxLength={1000}
+            />
+            
+            <Button
+              onClick={handleSend}
+              disabled={!message.trim() || disabled || uploading}
+              size="sm"
+              className="h-10 w-10 p-0 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+            >
+              <Send className="h-5 w-5" />
             </Button>
           </div>
-          <div className="grid grid-cols-6 gap-1">
-            {emojis.map((emoji, index) => (
-              <button
-                key={index}
-                onClick={() => handleEmojiClick(emoji)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-lg transition-colors"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
         </div>
-      )}
-      
-      <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-3">
-        <div className="flex items-end gap-2 bg-gray-50 dark:bg-gray-800 rounded-2xl p-2 border border-gray-200 dark:border-gray-700">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept="image/*,.pdf,.doc,.docx,.txt"
-            className="hidden"
-          />
-          
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading || disabled}
-            className="p-2 h-8 w-8 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
-          >
-            <Paperclip className="h-4 w-4" />
-          </Button>
-          
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowEmojis(!showEmojis)}
-            disabled={disabled}
-            className="p-2 h-8 w-8 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
-          >
-            <Smile className="h-4 w-4" />
-          </Button>
-          
-          <Input
-            ref={inputRef}
-            value={message}
-            onChange={handleMessageChange}
-            onKeyPress={handleKeyPress}
-            placeholder="Ketik pesan..."
-            disabled={disabled || uploading}
-            className="flex-1 bg-transparent border-0 focus-visible:ring-0 text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500"
-            maxLength={1000}
-          />
-          
-          <Button
-            onClick={handleSend}
-            disabled={!message.trim() || disabled || uploading}
-            size="sm"
-            className="h-8 w-8 p-0 bg-blue-500 hover:bg-blue-600 text-white rounded-full"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
 
-      <ImageEditor
-        open={showImageEditor}
-        onOpenChange={setShowImageEditor}
-        imageFile={selectedImageFile}
-        onSave={handleImageSave}
-      />
+        <ImageEditor
+          open={showImageEditor}
+          onOpenChange={setShowImageEditor}
+          imageFile={selectedImageFile}
+          onSave={handleImageSave}
+        />
+      </div>
     </div>
   );
 };
