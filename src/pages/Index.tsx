@@ -40,19 +40,30 @@ const Index = () => {
 
   const isHeadOfFamily = groups.some(group => group.head_of_family_id === user?.id);
 
-  // Handle onboarding and auth flow
+  // Handle onboarding and auth flow - PERBAIKAN LOGIKA ONBOARDING
   useEffect(() => {
     if (!loading && !user) {
       const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+      console.log('Checking onboarding status:', hasSeenOnboarding);
+      
       if (!hasSeenOnboarding) {
+        console.log('Showing onboarding...');
         setShowOnboarding(true);
+        setShowAuth(false);
       } else {
+        console.log('Showing auth...');
+        setShowOnboarding(false);
         setShowAuth(true);
       }
+    } else if (!loading && user) {
+      // User sudah login, reset flags
+      setShowOnboarding(false);
+      setShowAuth(false);
     }
   }, [user, loading]);
 
   const handleOnboardingComplete = () => {
+    console.log('Onboarding completed, setting localStorage');
     localStorage.setItem('hasSeenOnboarding', 'true');
     setShowOnboarding(false);
     setShowAuth(true);
@@ -86,22 +97,32 @@ const Index = () => {
   // Non-authenticated user flows
   if (!user) {
     if (showOnboarding) {
+      console.log('Rendering onboarding');
       return <Onboarding onComplete={handleOnboardingComplete} />;
     }
     if (showAuth) {
+      console.log('Rendering auth');
       return <Auth />;
     }
     
-    // Landing page
+    // Landing page - fallback jika tidak ada flag yang set
+    console.log('Rendering landing page');
     return (
       <LandingPage 
-        onShowOnboarding={() => setShowOnboarding(true)}
-        onShowAuth={() => setShowAuth(true)}
+        onShowOnboarding={() => {
+          setShowOnboarding(true);
+          setShowAuth(false);
+        }}
+        onShowAuth={() => {
+          setShowOnboarding(false);
+          setShowAuth(true);
+        }}
       />
     );
   }
 
   // Authenticated user
+  console.log('Rendering authenticated app');
   return (
     <AuthenticatedApp
       activeView={activeView}

@@ -2,7 +2,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useWelcomeMessage } from './useWelcomeMessage';
+import { useAuthActions } from './useAuthActions';
 
 interface AuthContextType {
   user: User | null;
@@ -24,35 +25,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasShownWelcome, setHasShownWelcome] = useState(false);
-  const { toast } = useToast();
+  
+  const { showWelcomeMessage } = useWelcomeMessage();
+  const { signUp, signIn, signOut, ensureProfileExists } = useAuthActions();
 
-  const showWelcomeMessage = async (user: User) => {
-    try {
-      // Ambil data profile untuk mendapatkan nama lengkap
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', user.id)
-        .single();
-
-      const userName = profile?.full_name || 
-        user.user_metadata?.full_name || 
-        user.user_metadata?.name || 
-        user.email?.split('@')[0] || 
-        'User';
-
-      // Tampilkan toast selamat datang
-      toast({
-        title: `Selamat datang ${userName}!`,
-        description: `Senang melihat Anda kembali di Family App`,
-        duration: 5000,
-      });
-    } catch (error) {
-      console.error('Error showing welcome message:', error);
-    }
-  };
-
-  // Perbaikan untuk masalah login Google
+  // Handle auth state changes
   const handleAuthStateChange = async (event: string, session: Session | null) => {
     console.log('Auth event:', event, session?.user?.email ?? 'No user');
     
@@ -154,90 +131,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [toast]);
+  }, [showWelcomeMessage, hasShownWelcome]);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-
-    try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
-
-      if (signUpError || !data.user) return { error: signUpError };
-
-      // Insert ke tabel 'profiles' secara manual
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user.id,
-        full_name: fullName,
-        role: 'member',
-      });
-
-      return { error: profileError };
-    } catch (error) {
-      console.error('Error in signUp:', error);
-      return { error };
-    }
-  };
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      return { error };
-    } catch (error) {
-      console.error('Error in signIn:', error);
-      return { error };
-    }
-  };
-
-  const signOut = async () => {
-    try {
-      setHasShownWelcome(false); // Reset welcome flag sebelum logout
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error('Error in signOut:', error);
-    }
-  };
-
-  const ensureProfileExists = async (user: User) => {
-    try {
-      // Cek apakah profile sudah ada
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single();
-
-      if (!data) {
-        // Insert profile jika belum ada data
-        const { error: insertError } = await supabase.from('profiles').insert({
-          id: user.id,
-          full_name: user.user_metadata?.full_name || 
-            user.user_metadata?.name || 
-            user.email?.split('@')[0] || 
-            'User',
-          role: 'member',
-        });
-
-        if (insertError) {
-          console.error('Error creating profile:', insertError);
-        } else {
-          console.log('Profile created successfully for user:', user.id);
-        }
-      }
-    } catch (error) {
-      console.error('Error in ensureProfileExists:', error);
-    }
+  const handleSignOut = async () => {
+    setHasShownWelcome(false); // Reset welcome flag sebelum logout
+    await signOut();
   };
 
   return (
@@ -247,7 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         signUp,
         signIn,
-        signOut,
+        signOut: handleSignOut,
         loading,
       }}
     >
