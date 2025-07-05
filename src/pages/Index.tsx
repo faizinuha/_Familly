@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/hooks/useAuth';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -143,6 +142,10 @@ const Index = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveView(tab as ViewType);
   };
 
   if (loading) {
@@ -325,7 +328,7 @@ const Index = () => {
           </main>
           <Navigation 
             activeTab={activeView} 
-            onTabChange={setActiveView} 
+            onTabChange={handleTabChange} 
             isHeadOfFamily={isHeadOfFamily} 
           />
         </div>

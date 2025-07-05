@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './useAuth';
 import { useNativeDeviceInfo } from './useNativeDeviceInfo';
@@ -336,6 +335,31 @@ export function useEnhancedDeviceMonitoring() {
     return devices.filter(device => device.user_id === user?.id);
   };
 
+  const sendNotification = async (message: string) => {
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: user.id,
+          title: 'Family Notification',
+          message: message,
+          type: 'monitoring'
+        });
+
+      if (error) {
+        console.error('Error sending notification:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      throw error;
+    }
+  };
+
   return {
     devices,
     activities,
@@ -347,6 +371,7 @@ export function useEnhancedDeviceMonitoring() {
     getOnlineDevices,
     getCurrentUserDevices,
     refreshDevices: fetchDevices,
-    refreshActivities: fetchActivities
+    refreshActivities: fetchActivities,
+    sendNotification
   };
 }
