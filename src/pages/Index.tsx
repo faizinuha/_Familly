@@ -1,4 +1,3 @@
-
 import Header from '@/components/Header';
 import Navigation from '@/components/Navigation';
 import PinAuthScreen from '@/components/PinAuthScreen';
@@ -18,35 +17,61 @@ import { useProfile } from '@/hooks/useProfile';
 import { useUserStatus } from '@/hooks/useUserStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from 'react';
-
 const Index = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [newGroupName, setNewGroupName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [joinedGroupIds, setJoinedGroupIds] = useState<string[]>([]);
-
-  const { user, signOut } = useAuth();
-  const { profile, isHeadOfFamily } = useProfile();
-  const { groups, createGroup, joinGroup, leaveGroup, refreshGroups } =
-    useFamilyGroups();
-  const { messages, sendMessage, sendSystemNotification, uploadFile } =
-    useGroupMessages(selectedGroupId);
-  const { devices, activities } = useDeviceMonitoring();
-  const { updateMyStatus } = useUserStatus();
-  const { members: groupMembers } = useGroupMembers(selectedGroupId);
-  const { toast } = useToast();
-  const { isAuthenticated, pinEnabled, authenticate, requireAuth } =
-    usePinAuth();
+  const {
+    user,
+    signOut
+  } = useAuth();
+  const {
+    profile,
+    isHeadOfFamily
+  } = useProfile();
+  const {
+    groups,
+    createGroup,
+    joinGroup,
+    leaveGroup,
+    refreshGroups
+  } = useFamilyGroups();
+  const {
+    messages,
+    sendMessage,
+    sendSystemNotification,
+    uploadFile
+  } = useGroupMessages(selectedGroupId);
+  const {
+    devices,
+    activities
+  } = useDeviceMonitoring();
+  const {
+    updateMyStatus
+  } = useUserStatus();
+  const {
+    members: groupMembers
+  } = useGroupMembers(selectedGroupId);
+  const {
+    toast
+  } = useToast();
+  const {
+    isAuthenticated,
+    pinEnabled,
+    authenticate,
+    requireAuth
+  } = usePinAuth();
 
   // Ambil daftar group_id yang sudah di-join user
   useEffect(() => {
     const fetchJoinedGroups = async () => {
       if (!user?.id) return;
-      const { data, error } = await supabase
-        .from('group_members')
-        .select('group_id')
-        .eq('user_id', user.id);
+      const {
+        data,
+        error
+      } = await supabase.from('group_members').select('group_id').eq('user_id', user.id);
       if (!error && data) {
         setJoinedGroupIds(data.map((row: any) => row.group_id));
       }
@@ -56,7 +81,7 @@ const Index = () => {
 
   // PERBAIKAN: Hapus auto-select grup yang menyebabkan masalah navigasi
   // Biarkan user memilih grup secara manual
-  
+
   // Update user activity
   useEffect(() => {
     updateMyStatus(true, `Menggunakan Family - Tab: ${activeTab}`);
@@ -69,20 +94,17 @@ const Index = () => {
         setTimeout(() => requireAuth(), 100);
       }
     };
-
     window.addEventListener('blur', handleBlur);
     return () => window.removeEventListener('blur', handleBlur);
   }, [pinEnabled, requireAuth]);
-
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
-
     try {
       const group = await createGroup(newGroupName);
       if (group) {
         toast({
           title: 'Berhasil!',
-          description: `Grup "${newGroupName}" berhasil dibuat`,
+          description: `Grup "${newGroupName}" berhasil dibuat`
         });
         setNewGroupName('');
         // Perbaikan: Hanya set selected group jika user memang ingin langsung masuk
@@ -92,20 +114,18 @@ const Index = () => {
       toast({
         title: 'Error',
         description: 'Gagal membuat grup',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     }
   };
-
   const handleJoinGroup = async () => {
     if (!inviteCode.trim()) return;
-
     try {
       const group = await joinGroup(inviteCode);
       if (group) {
         toast({
           title: 'Berhasil!',
-          description: `Berhasil bergabung dengan grup "${group.name}"`,
+          description: `Berhasil bergabung dengan grup "${group.name}"`
         });
         setInviteCode('');
         // Perbaikan: Hanya set selected group jika user memang ingin langsung masuk
@@ -115,19 +135,17 @@ const Index = () => {
       toast({
         title: 'Error',
         description: (error as Error).message || 'Gagal bergabung ke grup',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     }
   };
-
   const handleLeaveGroup = async (groupId: string) => {
     if (!window.confirm('Yakin ingin keluar dari grup ini?')) return;
-
     try {
       await leaveGroup(groupId);
       toast({
         title: 'Berhasil!',
-        description: 'Berhasil keluar dari grup',
+        description: 'Berhasil keluar dari grup'
       });
 
       // If this was the selected group, clear the selection
@@ -138,119 +156,75 @@ const Index = () => {
       toast({
         title: 'Error',
         description: 'Gagal keluar dari grup',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     }
   };
-
-  const handleSendMessage = async (
-    message: string,
-    fileUrl?: string,
-    fileType?: string,
-    fileName?: string
-  ) => {
+  const handleSendMessage = async (message: string, fileUrl?: string, fileType?: string, fileName?: string) => {
     try {
       await sendMessage(message, [], fileUrl, fileType, fileName);
     } catch (error) {
       toast({
         title: 'Error',
         description: 'Gagal mengirim pesan',
-        variant: 'destructive',
+        variant: 'destructive'
       });
       throw error;
     }
   };
-
   const handleSendNotification = async (message: string) => {
     try {
       await sendSystemNotification(message);
       toast({
         title: 'Notifikasi terkirim',
-        description: message,
+        description: message
       });
     } catch (error) {
       toast({
         title: 'Error',
         description: 'Gagal mengirim notifikasi',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     }
   };
-
   const handleDeleteGroup = async (groupId: string) => {
     if (!window.confirm('Yakin ingin menghapus grup ini?')) return;
     try {
-      const { error } = await import('@/integrations/supabase/client').then(
-        ({ supabase }) =>
-          supabase.from('family_groups').delete().eq('id', groupId)
-      );
+      const {
+        error
+      } = await import('@/integrations/supabase/client').then(({
+        supabase
+      }) => supabase.from('family_groups').delete().eq('id', groupId));
       if (error) throw error;
-      toast({ title: 'Grup dihapus', description: 'Grup berhasil dihapus' });
+      toast({
+        title: 'Grup dihapus',
+        description: 'Grup berhasil dihapus'
+      });
       refreshGroups();
       setSelectedGroupId(null);
     } catch (error) {
       toast({
         title: 'Error',
         description: 'Gagal menghapus grup',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     }
   };
-
-  const selectedGroup = groups.find((g) => g.name === selectedGroupId);
-
+  const selectedGroup = groups.find(g => g.name === selectedGroupId);
   const renderContent = () => {
     switch (activeTab) {
       case 'home':
-        return (
-          <HomeView
-            profile={profile}
-            user={user}
-            isHeadOfFamily={isHeadOfFamily}
-            groups={groups}
-          />
-        );
+        return <HomeView profile={profile} user={user} isHeadOfFamily={isHeadOfFamily} groups={groups} />;
       case 'groups':
-        return (
-          <GroupsView
-            groups={groups}
-            user={user}
-            groupMembers={groupMembers || []}
-            newGroupName={newGroupName}
-            setNewGroupName={setNewGroupName}
-            inviteCode={inviteCode}
-            setInviteCode={setInviteCode}
-            onCreateGroup={handleCreateGroup}
-            onJoinGroup={handleJoinGroup}
-            onDeleteGroup={handleDeleteGroup}
-            onSelectGroup={setSelectedGroupId}
-            onLeaveGroup={handleLeaveGroup}
-          />
-        );
+        return <GroupsView groups={groups} user={user} groupMembers={groupMembers || []} newGroupName={newGroupName} setNewGroupName={setNewGroupName} inviteCode={inviteCode} setInviteCode={setInviteCode} onCreateGroup={handleCreateGroup} onJoinGroup={handleJoinGroup} onDeleteGroup={handleDeleteGroup} onSelectGroup={setSelectedGroupId} onLeaveGroup={handleLeaveGroup} />;
       case 'monitoring':
-        return (
-          <MonitoringView
-            devices={devices}
-            isHeadOfFamily={isHeadOfFamily}
-            onSendNotification={handleSendNotification}
-            groups={groups}
-            selectedGroupId={selectedGroupId}
-          />
-        );
-      case 'chat': {
-        // Filter: hanya grup yang sudah di-join user atau dibuat user
-        const filteredGroups = groups.filter(
-          (g) =>
-            joinedGroupIds.includes(g.id) || g.head_of_family_id === user?.id
-        );
-        return (
-          <ChatView
-            groups={filteredGroups}
-            selectedGroupId={selectedGroupId}
-            onSelectGroup={setSelectedGroupId}
-          />
-        );
-      }
+        return <MonitoringView devices={devices} isHeadOfFamily={isHeadOfFamily} onSendNotification={handleSendNotification} groups={groups} selectedGroupId={selectedGroupId} />;
+      case 'chat':
+        {
+          // Filter: hanya grup yang sudah di-join user atau dibuat user
+          const filteredGroups = groups.filter(g => joinedGroupIds.includes(g.id) || g.head_of_family_id === user?.id);
+          return <ChatView groups={filteredGroups} selectedGroupId={selectedGroupId} onSelectGroup={setSelectedGroupId} />;
+        }
       case 'settings':
         return <SettingsView />;
       default:
@@ -262,36 +236,20 @@ const Index = () => {
   if (pinEnabled && !isAuthenticated) {
     return <PinAuthScreen onAuthenticated={authenticate} />;
   }
-
-  return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+  return <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <Header />
 
-      <div className="flex-1 pb-20">
-        <div
-          className={`h-full ${activeTab === 'chat' ? 'flex flex-col' : ''}`}
-        >
-          <div
-            className={`max-w-md mx-auto h-full ${
-              activeTab === 'chat'
-                ? 'flex flex-col'
-                : 'overflow-y-auto px-4 py-6'
-            }`}
-          >
+      <div className="flex-1 pb-20 sticky ">
+        <div className={`h-full ${activeTab === 'chat' ? 'flex flex-col' : ''}`}>
+          <div className={`max-w-md mx-auto h-full ${activeTab === 'chat' ? 'flex flex-col' : 'overflow-y-auto px-4 py-6'}`}>
             {renderContent()}
           </div>
         </div>
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-50">
-        <Navigation
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          isHeadOfFamily={isHeadOfFamily}
-        />
+        <Navigation activeTab={activeTab} onTabChange={setActiveTab} isHeadOfFamily={isHeadOfFamily} />
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
