@@ -216,7 +216,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="relative">
+    <div className="relative bg-white border-t border-gray-200">
       <MentionsList
         members={members}
         onMentionSelect={handleMentionSelect}
@@ -225,9 +225,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
       />
 
       {showEmojis && (
-        <div className="absolute bottom-full left-0 mb-2 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl z-10 backdrop-blur-sm">
+        <div className="absolute bottom-full left-0 mb-2 p-3 bg-white border border-gray-200 rounded-2xl shadow-xl z-10 backdrop-blur-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Emoji</span>
+            <span className="text-xs font-medium text-gray-600">Emoji</span>
             <Button
               size="sm"
               variant="ghost"
@@ -242,7 +242,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
               <button
                 key={index}
                 onClick={() => handleEmojiClick(emoji)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg text-lg transition-colors"
               >
                 {emoji}
               </button>
@@ -251,8 +251,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
       
-      <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-3">
-        <div className="flex items-end gap-2 bg-gray-50 dark:bg-gray-800 rounded-2xl p-2 border border-gray-200 dark:border-gray-700">
+      <div className="p-3">
+        <div className="flex items-end gap-2 bg-gray-50 rounded-2xl p-2 border border-gray-200">
           <input
             type="file"
             ref={fileInputRef}
@@ -267,7 +267,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             size="sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading || disabled}
-            className="p-2 h-8 w-8 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
+            className="p-2 h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
           >
             <Paperclip className="h-4 w-4" />
           </Button>
@@ -278,7 +278,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             size="sm"
             onClick={() => setShowEmojis(!showEmojis)}
             disabled={disabled}
-            className="p-2 h-8 w-8 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700"
+            className="p-2 h-8 w-8 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
           >
             <Smile className="h-4 w-4" />
           </Button>
@@ -290,7 +290,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             onKeyPress={handleKeyPress}
             placeholder="Ketik pesan..."
             disabled={disabled || uploading}
-            className="flex-1 bg-transparent border-0 focus-visible:ring-0 text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500"
+            className="flex-1 bg-transparent border-0 focus-visible:ring-0 text-sm placeholder:text-gray-400"
             maxLength={1000}
           />
           

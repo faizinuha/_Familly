@@ -222,7 +222,7 @@ export default function ChatView({
               }
               const actualMemberCount = members.length;
               return (
-                <div className="flex flex-col h-full max-w-md mx-auto">
+                <div className="flex flex-col h-full">
                   <ChatHeader
                     selectedGroup={selectedGroup}
                     memberCount={actualMemberCount}
@@ -231,12 +231,14 @@ export default function ChatView({
                     groups={availableGroups}
                     onSelectGroup={onSelectGroup}
                   />
-                  <ChatMessages
-                    messages={messages}
-                    messagesLoading={messagesLoading}
-                    currentUserId={user?.id || ''}
-                  />
-                  <div className="border-t bg-white shadow-lg sticky bottom-0 z-10">
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <ChatMessages
+                      messages={messages}
+                      messagesLoading={messagesLoading}
+                      currentUserId={user?.id || ''}
+                    />
+                  </div>
+                  <div className="flex-shrink-0">
                     <ChatInput
                       onSendMessage={handleSendMessage}
                       onUploadFile={handleUploadFile}
