@@ -15,6 +15,7 @@ import ContactList from '@/components/chat/ContactList';
 interface Group {
   id: string;
   name: string;
+  // Add other properties as needed
 }
 
 interface ChatViewProps {
@@ -31,8 +32,12 @@ export default function ChatView({
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'group' | 'contact' | 'call'>('group');
+  // Tab state: 'group', 'contact', 'call'
+  const [activeTab, setActiveTab] = useState<'group' | 'contact' | 'call'>(
+    'group'
+  );
 
+  // Only fetch group data if tab is group
   const {
     messages,
     loading: messagesLoading,
@@ -43,6 +48,7 @@ export default function ChatView({
     activeTab === 'group' ? selectedGroupId : null
   );
 
+  // Debug logging for member count
   useEffect(() => {
     if (activeTab === 'group' && selectedGroupId) {
       console.log('ChatView members update:', {
@@ -86,30 +92,49 @@ export default function ChatView({
     }
   };
 
-  const [lastOpenedGroupId, setLastOpenedGroupId] = useState<string | null>(null);
+  const [groupList, setGroupList] = useState<Group[]>(groups);
+  const [lastOpenedGroupId, setLastOpenedGroupId] = useState<string | null>(
+    null
+  );
+
+  // Daftar grup yang sudah di-join user atau dibuat user
   const availableGroups = groups;
+
+  // Filter: hanya grup yang sudah di-join atau dibuat user
   const filteredGroups = groups.filter((g: any) => {
+    // Fallback: jika tidak ada properti joined/ownerId, anggap false
     const isJoined = g.joined === true;
     const isOwner = g.ownerId === user?.id;
     return isJoined || isOwner;
   });
 
+  // Sync last opened group
   useEffect(() => {
     if (selectedGroupId) setLastOpenedGroupId(selectedGroupId);
   }, [selectedGroupId]);
 
+  // Sync groupList with props.groups jika berubah
+  useEffect(() => {
+    setGroupList(groups);
+  }, [groups]);
+
+  // Perbaikan: Jangan auto-select grup saat kembali ke tab grup
   const handleBackClick = () => {
     if (membersLoading) return;
+    // Hapus auto-select grup saat kembali ke daftar
     onSelectGroup(null);
   };
 
+  // Perbaikan: Jangan auto-select grup saat pindah tab
   const handleTabChange = (tab: 'group' | 'contact' | 'call') => {
     setActiveTab(tab);
+    // Jika pindah dari tab grup, clear selected group
     if (activeTab === 'group' && tab !== 'group') {
       onSelectGroup(null);
     }
   };
 
+  // Tab Navbar
   const tabList = [
     { key: 'group', label: 'Grup', icon: Users },
     { key: 'contact', label: 'Kontak', icon: User },
@@ -117,17 +142,17 @@ export default function ChatView({
   ];
 
   return (
-    <div className="flex flex-col h-full relative">
+    <div className="flex flex-col h-full">
       {/* Tab Navbar */}
-      <div className="flex border-b bg-white dark:bg-gray-900 sticky top-0 z-40">
+      <div className="flex border-b bg-white">
         {tabList.map((tab) => (
           <button
             key={tab.key}
             onClick={() => handleTabChange(tab.key as 'group' | 'contact' | 'call')}
-            className={`flex-1 flex flex-col items-center py-3 px-1 text-sm font-medium transition-all border-b-2 ${
+            className={`flex-1 flex flex-col items-center py-2 px-1 text-sm font-medium transition-all border-b-2 ${
               activeTab === tab.key
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                : 'border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                ? 'border-blue-500 text-blue-600 bg-blue-50'
+                : 'border-transparent text-gray-500 hover:bg-gray-50'
             }`}
           >
             <tab.icon className="h-5 w-5 mb-1" />
@@ -137,79 +162,81 @@ export default function ChatView({
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 flex flex-col min-h-0">
-        {activeTab === 'group' && (
-          <>
-            {!selectedGroupId ? (
-              <ChatGroupList
-                groups={availableGroups}
-                onSelectGroup={onSelectGroup}
-                lastOpenedGroupId={lastOpenedGroupId}
-              />
-            ) : (
-              (() => {
-                const selectedGroup = availableGroups.find((g) => g.id === selectedGroupId);
-                if (!selectedGroup) {
-                  return (
-                    <div className="flex flex-col h-full">
-                      <ChatHeader
-                        selectedGroup={{
-                          id: selectedGroupId,
-                          name: 'Grup tidak ditemukan',
-                        }}
-                        memberCount={0}
-                        membersLoading={false}
-                        onBackClick={handleBackClick}
-                        groups={availableGroups}
-                        onSelectGroup={onSelectGroup}
-                      />
-                      <div className="flex-1 flex items-center justify-center">
-                        <div className="text-center">
-                          <p className="text-gray-500 dark:text-gray-400 mb-4">
-                            Grup yang dipilih tidak tersedia
-                          </p>
-                          <Button onClick={handleBackClick}>Kembali ke Daftar Grup</Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                if (membersLoading) {
-                  return (
-                    <div className="flex flex-col h-full items-center justify-center">
-                      <div className="text-gray-400 dark:text-gray-500 text-sm">
-                        Memuat anggota grup...
-                      </div>
-                    </div>
-                  );
-                }
-                if (!members) {
-                  return (
-                    <div className="flex flex-col h-full items-center justify-center">
-                      <div className="text-gray-400 dark:text-gray-500 text-sm">
-                        Tidak ada anggota grup ditemukan.
-                      </div>
-                    </div>
-                  );
-                }
-                const actualMemberCount = members.length;
+      {activeTab === 'group' && (
+        <>
+          {!selectedGroupId ? (
+            <ChatGroupList
+              groups={availableGroups}
+              onSelectGroup={onSelectGroup}
+              lastOpenedGroupId={lastOpenedGroupId}
+            />
+          ) : (
+            (() => {
+              const selectedGroup = availableGroups.find(
+                (g) => g.id === selectedGroupId
+              );
+              if (!selectedGroup) {
                 return (
                   <div className="flex flex-col h-full">
                     <ChatHeader
-                      selectedGroup={selectedGroup}
-                      memberCount={actualMemberCount}
-                      membersLoading={membersLoading}
+                      selectedGroup={{
+                        id: selectedGroupId,
+                        name: 'Grup tidak ditemukan',
+                      }}
+                      memberCount={0}
+                      membersLoading={false}
                       onBackClick={handleBackClick}
                       groups={availableGroups}
                       onSelectGroup={onSelectGroup}
                     />
-                    <div className="flex-1 min-h-0">
-                      <ChatMessages
-                        messages={messages}
-                        messagesLoading={messagesLoading}
-                        currentUserId={user?.id || ''}
-                      />
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-gray-500 mb-4">
+                          Grup yang dipilih tidak tersedia
+                        </p>
+                        <Button onClick={handleBackClick}>
+                          Kembali ke Daftar Grup
+                        </Button>
+                      </div>
                     </div>
+                  </div>
+                );
+              }
+              if (membersLoading) {
+                return (
+                  <div className="flex flex-col h-full items-center justify-center">
+                    <div className="text-gray-400 text-sm">
+                      Memuat anggota grup...
+                    </div>
+                  </div>
+                );
+              }
+              if (!members) {
+                return (
+                  <div className="flex flex-col h-full items-center justify-center">
+                    <div className="text-gray-400 text-sm">
+                      Tidak ada anggota grup ditemukan.
+                    </div>
+                  </div>
+                );
+              }
+              const actualMemberCount = members.length;
+              return (
+                <div className="flex flex-col h-full max-w-md mx-auto">
+                  <ChatHeader
+                    selectedGroup={selectedGroup}
+                    memberCount={actualMemberCount}
+                    membersLoading={membersLoading}
+                    onBackClick={handleBackClick}
+                    groups={availableGroups}
+                    onSelectGroup={onSelectGroup}
+                  />
+                  <ChatMessages
+                    messages={messages}
+                    messagesLoading={messagesLoading}
+                    currentUserId={user?.id || ''}
+                  />
+                  <div className="border-t bg-white shadow-lg sticky bottom-0 z-10">
                     <ChatInput
                       onSendMessage={handleSendMessage}
                       onUploadFile={handleUploadFile}
@@ -217,18 +244,20 @@ export default function ChatView({
                       members={members}
                     />
                   </div>
-                );
-              })()
-            )}
-          </>
-        )}
-        {activeTab === 'contact' && <ContactList />}
-        {activeTab === 'call' && (
-          <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500 text-lg">
-            Fitur telepon coming soon
-          </div>
-        )}
-      </div>
+                </div>
+              );
+            })()
+          )}
+        </>
+      )}
+      {activeTab === 'contact' && (
+        <ContactList />
+      )}
+      {activeTab === 'call' && (
+        <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">
+          Fitur telepon coming soon
+        </div>
+      )}
     </div>
   );
 }

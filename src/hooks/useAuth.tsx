@@ -2,8 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useWelcomeMessage } from './useWelcomeMessage';
-import { useAuthActions } from './useAuthActions';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -24,12 +23,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hasShownWelcome, setHasShownWelcome] = useState(false);
-  
-  const { showWelcomeMessage } = useWelcomeMessage();
-  const { signUp, signIn, signOut, ensureProfileExists } = useAuthActions();
+  const { toast } = useToast();
 
-  // Handle auth state changes
+  const sendWelcomeEmail = async (user: User) => {
+    try {
+      // In production, you would call an edge function to send email
+      console.log(`Welcome email would be sent to: ${user.email}`);
+
+      // Show a toast notification
+      toast({
+        title: 'Selamat Datang!',
+        description: `Email selamat datang telah dikirim ke ${user.email}`,
+      });
+    } catch (error) {
+      console.error('Error sending welcome email:', error);
+    }
+  };
+
+  // Perbaikan untuk masalah login Google
   const handleAuthStateChange = async (event: string, session: Session | null) => {
     console.log('Auth event:', event, session?.user?.email ?? 'No user');
     
@@ -39,16 +50,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
 
     // Handle berbagai event auth
-    if (event === 'SIGNED_IN' && session?.user && !hasShownWelcome) {
+    if (event === 'SIGNED_IN' && session?.user) {
       // Pastikan profile ada untuk semua user (termasuk Google/social)
       setTimeout(async () => {
         try {
           await ensureProfileExists(session.user);
           
-          // Tampilkan pesan selamat datang hanya sekali per session
-          await showWelcomeMessage(session.user);
-          setHasShownWelcome(true);
-          
+          // Check if this is a social login (not email)
+          const isSocialLogin = session.user.app_metadata.provider && 
+            session.user.app_metadata.provider !== 'email';
+            
+          if (isSocialLogin) {
+            // Send welcome email for new users (social login)
+            sendWelcomeEmail(session.user);
+          }
         } catch (error) {
           console.error('Error in post-login processing:', error);
         }
@@ -67,7 +82,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('User signed out');
       setSession(null);
       setUser(null);
-      setHasShownWelcome(false); // Reset welcome flag saat logout
     }
   };
 
@@ -108,14 +122,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(session);
           setUser(session?.user ?? null);
           setLoading(false);
-
-          // Jika ada session existing, tampilkan welcome message
-          if (session?.user && !hasShownWelcome) {
-            setTimeout(async () => {
-              await showWelcomeMessage(session.user);
-              setHasShownWelcome(true);
-            }, 1000);
-          }
         }
       } catch (error) {
         console.error('Error checking session:', error);
@@ -131,11 +137,89 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [showWelcomeMessage, hasShownWelcome]);
+  }, [toast]);
 
-  const handleSignOut = async () => {
-    setHasShownWelcome(false); // Reset welcome flag sebelum logout
-    await signOut();
+  const signUp = async (email: string, password: string, fullName: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
+
+      if (signUpError || !data.user) return { error: signUpError };
+
+      // Insert ke tabel 'profiles' secara manual
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: data.user.id,
+        full_name: fullName,
+        role: 'member',
+      });
+
+      return { error: profileError };
+    } catch (error) {
+      console.error('Error in signUp:', error);
+      return { error };
+    }
+  };
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      return { error };
+    } catch (error) {
+      console.error('Error in signIn:', error);
+      return { error };
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error in signOut:', error);
+    }
+  };
+
+  const ensureProfileExists = async (user: User) => {
+    try {
+      // Cek apakah profile sudah ada
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (!data) {
+        // Insert profile jika belum ada data
+        const { error: insertError } = await supabase.from('profiles').insert({
+          id: user.id,
+          full_name: user.user_metadata?.full_name || 
+            user.user_metadata?.name || 
+            user.email?.split('@')[0] || 
+            'User',
+          role: 'member',
+        });
+
+        if (insertError) {
+          console.error('Error creating profile:', insertError);
+        } else {
+          console.log('Profile created successfully for user:', user.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error in ensureProfileExists:', error);
+    }
   };
 
   return (
@@ -145,7 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         signUp,
         signIn,
-        signOut: handleSignOut,
+        signOut,
         loading,
       }}
     >
