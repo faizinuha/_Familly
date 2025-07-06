@@ -85,6 +85,19 @@ export function useGroupMessages(groupId: string | null) {
             console.log('New group message received:', payload);
             fetchMessages(); // Refetch to get complete data with profiles
           }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'group_messages',
+            filter: `group_id=eq.${groupId}`,
+          },
+          (payload) => {
+            console.log('Group message deleted:', payload);
+            fetchMessages();
+          }
         );
 
       // Only subscribe if channel is not already subscribed
@@ -138,6 +151,26 @@ export function useGroupMessages(groupId: string | null) {
       }
     } catch (error) {
       console.error('Error in sendMessage:', error);
+      throw error;
+    }
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    if (!user || !groupId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('group_messages')
+        .delete()
+        .eq('id', messageId)
+        .eq('sender_id', user.id); // Only allow deleting own messages
+      
+      if (error) {
+        console.error('Error deleting message:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error in deleteMessage:', error);
       throw error;
     }
   };
@@ -196,6 +229,7 @@ export function useGroupMessages(groupId: string | null) {
     messages,
     loading,
     sendMessage,
+    deleteMessage,
     sendSystemNotification,
     uploadFile,
     refreshMessages: fetchMessages,

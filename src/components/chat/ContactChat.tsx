@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Phone, Video, MoreVertical } from "lucide-react";
@@ -30,6 +29,7 @@ const ContactChat: React.FC<ContactChatProps> = ({ contact, onBack }) => {
     messages,
     loading,
     sendMessage,
+    deleteMessage,
     uploadFile,
   } = usePrivateMessages(contact.id);
 
@@ -46,6 +46,23 @@ const ContactChat: React.FC<ContactChatProps> = ({ contact, onBack }) => {
       toast({
         title: 'Error',
         description: 'Gagal mengirim pesan',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      await deleteMessage(messageId);
+      toast({
+        title: 'Berhasil',
+        description: 'Pesan berhasil dihapus',
+      });
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      toast({
+        title: 'Error',
+        description: 'Gagal menghapus pesan',
         variant: 'destructive',
       });
     }
@@ -135,6 +152,7 @@ const ContactChat: React.FC<ContactChatProps> = ({ contact, onBack }) => {
         messages={transformedMessages}
         messagesLoading={loading}
         currentUserId={user?.id || ''}
+        onDeleteMessage={handleDeleteMessage}
       />
 
       {/* Input */}

@@ -1,4 +1,3 @@
-
 import ChatMessage from '@/components/ChatMessage';
 import EmptyState from '@/components/ui/EmptyState';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -9,16 +8,17 @@ interface ChatMessagesProps {
   messages: any[];
   messagesLoading: boolean;
   currentUserId: string;
+  onDeleteMessage?: (messageId: string) => void;
 }
 
 export default function ChatMessages({
   messages,
   messagesLoading,
   currentUserId,
+  onDeleteMessage,
 }: ChatMessagesProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Optimized scroll function with useCallback
   const scrollToBottom = useCallback(() => {
     if (scrollAreaRef.current) {
       const scrollElement = scrollAreaRef.current.querySelector(
@@ -30,7 +30,6 @@ export default function ChatMessages({
     }
   }, []);
 
-  // Auto scroll to bottom when new messages arrive (debounced)
   useEffect(() => {
     const timeoutId = setTimeout(scrollToBottom, 100);
     return () => clearTimeout(timeoutId);
@@ -60,6 +59,7 @@ export default function ChatMessages({
                 key={message.id}
                 message={message}
                 currentUserId={currentUserId}
+                onDeleteMessage={onDeleteMessage}
               />
             ))
           ) : (

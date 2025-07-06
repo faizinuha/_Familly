@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from './useAuth';
@@ -22,7 +21,6 @@ export function usePrivateMessages(contactId: string | null) {
   const [localMessages, setLocalMessages] = useState<PrivateMessage[]>([]);
 
   useEffect(() => {
-    // Always cleanup previous channel first
     if (channelRef.current) {
       console.log('Cleaning up previous channel');
       supabase.removeChannel(channelRef.current);
@@ -37,7 +35,6 @@ export function usePrivateMessages(contactId: string | null) {
 
     setLoading(true);
     
-    // Filter messages for this specific contact conversation
     const contactMessages = localMessages.filter(msg => 
       (msg.sender_id === user.id && msg.recipient_id === contactId) ||
       (msg.sender_id === contactId && msg.recipient_id === user.id)
@@ -46,7 +43,6 @@ export function usePrivateMessages(contactId: string | null) {
     setMessages(contactMessages);
     setLoading(false);
 
-    // Create unique channel name to avoid duplicate subscriptions
     const channelName = `private-${user.id}-${contactId}-${Date.now()}`;
     console.log('Creating new channel:', channelName);
     
@@ -61,6 +57,12 @@ export function usePrivateMessages(contactId: string | null) {
             setMessages(prev => [...prev, newMessage]);
             setLocalMessages(prev => [...prev, newMessage]);
           }
+        })
+        .on('broadcast', { event: 'delete_message' }, (payload) => {
+          console.log('Received delete message broadcast:', payload);
+          const messageId = payload.payload.messageId;
+          setMessages(prev => prev.filter(msg => msg.id !== messageId));
+          setLocalMessages(prev => prev.filter(msg => msg.id !== messageId));
         })
         .subscribe((status) => {
           console.log('Channel subscription status:', status);
@@ -79,7 +81,7 @@ export function usePrivateMessages(contactId: string | null) {
         channelRef.current = null;
       }
     };
-  }, [contactId, user?.id]); // Remove localMessages from dependency to avoid infinite loops
+  }, [contactId, user?.id]);
 
   const sendMessage = async (
     message: string,
@@ -100,13 +102,9 @@ export function usePrivateMessages(contactId: string | null) {
       file_name: fileName,
     };
 
-    console.log('Sending message:', newMessage);
-
-    // Add to local state immediately
     setMessages(prev => [...prev, newMessage]);
     setLocalMessages(prev => [...prev, newMessage]);
 
-    // Broadcast to other clients
     if (channelRef.current) {
       try {
         const result = await channelRef.current.send({
@@ -117,6 +115,27 @@ export function usePrivateMessages(contactId: string | null) {
         console.log('Broadcast result:', result);
       } catch (error) {
         console.error('Error broadcasting message:', error);
+      }
+    }
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    if (!user || !contactId) return;
+
+    // Remove from local state
+    setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    setLocalMessages(prev => prev.filter(msg => msg.id !== messageId));
+
+    // Broadcast delete to other clients
+    if (channelRef.current) {
+      try {
+        await channelRef.current.send({
+          type: 'broadcast',
+          event: 'delete_message',
+          payload: { messageId }
+        });
+      } catch (error) {
+        console.error('Error broadcasting delete:', error);
       }
     }
   };
@@ -160,6 +179,7 @@ export function usePrivateMessages(contactId: string | null) {
     messages,
     loading,
     sendMessage,
+    deleteMessage,
     uploadFile,
   };
 }

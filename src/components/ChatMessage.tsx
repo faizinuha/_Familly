@@ -1,8 +1,9 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Image } from 'lucide-react';
-import React, { memo } from 'react';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
+import { Download, FileText, Trash2, Volume2 } from 'lucide-react';
+import React, { memo, useState } from 'react';
 
 interface ChatMessageProps {
   message: {
@@ -19,15 +20,19 @@ interface ChatMessageProps {
   };
   currentUserId: string;
   onMentionClick?: (userId: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = memo(({
   message,
   currentUserId,
   onMentionClick,
+  onDeleteMessage,
 }) => {
+  const [showDeleteButton, setShowDeleteButton] = useState(false);
   const isMyMessage = message.sender_id === currentUserId;
   const isSystemMessage = message.is_system_notification;
+  const isVoiceMessage = message.file_type?.startsWith('audio/') || message.message.includes('🎤');
 
   const formatMessage = (text: string) => {
     return text.replace(/@(\w+)/g, (match, username) => {
@@ -35,10 +40,55 @@ const ChatMessage: React.FC<ChatMessageProps> = memo(({
     });
   };
 
+  const handleDeleteClick = () => {
+    if (onDeleteMessage && isMyMessage) {
+      onDeleteMessage(message.id);
+    }
+  };
+
+  const handleLongPress = () => {
+    if (isMyMessage) {
+      setShowDeleteButton(true);
+      setTimeout(() => setShowDeleteButton(false), 3000);
+    }
+  };
+
+  const playVoiceMessage = () => {
+    if (message.file_url && isVoiceMessage) {
+      const audio = new Audio(message.file_url);
+      audio.play().catch(console.error);
+    }
+  };
+
   const renderFilePreview = () => {
     if (!message.file_url) return null;
 
     const isImage = message.file_type?.startsWith('image/');
+
+    if (isVoiceMessage) {
+      return (
+        <div className="mt-2">
+          <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl max-w-xs border border-blue-200/50 dark:border-blue-700/50">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={playVoiceMessage}
+              className="flex-shrink-0 h-8 w-8 p-0 hover:bg-blue-200 dark:hover:bg-blue-700 rounded-full"
+            >
+              <Volume2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </Button>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate block">
+                Pesan Suara
+              </span>
+              <span className="text-xs text-blue-600 dark:text-blue-400">
+                Ketuk untuk memutar
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="mt-2">
@@ -95,9 +145,9 @@ const ChatMessage: React.FC<ChatMessageProps> = memo(({
     minute: '2-digit',
   });
 
-  return (
+  const MessageContent = () => (
     <div className={`flex ${isMyMessage ? 'justify-end' : 'justify-start'} mb-2`}>
-      <div className="max-w-[75%] sm:max-w-xs">
+      <div className="max-w-[75%] sm:max-w-xs relative">
         {!isMyMessage && (
           <div className="flex items-center gap-2 mb-1.5 px-1">
             <div className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center flex-shrink-0">
@@ -120,6 +170,12 @@ const ChatMessage: React.FC<ChatMessageProps> = memo(({
               ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-md ml-2'
               : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md mr-2 border border-gray-200/50 dark:border-gray-700/50'
           }`}
+          onTouchStart={() => {
+            const timer = setTimeout(handleLongPress, 800);
+            const cleanup = () => clearTimeout(timer);
+            document.addEventListener('touchend', cleanup, { once: true });
+            document.addEventListener('touchcancel', cleanup, { once: true });
+          }}
         >
           {message.message && (
             <div
@@ -130,6 +186,18 @@ const ChatMessage: React.FC<ChatMessageProps> = memo(({
             />
           )}
           {renderFilePreview()}
+          
+          {/* Delete button for mobile */}
+          {showDeleteButton && isMyMessage && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={handleDeleteClick}
+              className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          )}
         </div>
 
         {isMyMessage && (
@@ -140,6 +208,25 @@ const ChatMessage: React.FC<ChatMessageProps> = memo(({
       </div>
     </div>
   );
+
+  // Only allow context menu for user's own messages
+  if (isMyMessage && onDeleteMessage) {
+    return (
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <MessageContent />
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onClick={handleDeleteClick} className="text-red-600">
+            <Trash2 className="h-4 w-4 mr-2" />
+            Hapus Pesan
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+    );
+  }
+
+  return <MessageContent />;
 });
 
 ChatMessage.displayName = 'ChatMessage';
