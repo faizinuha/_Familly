@@ -245,12 +245,13 @@ Tampilan utama dengan statistik keluarga, status online anggota, dan aktivitas t
 - [ ] **Screen Time Control**: Parental control untuk anak
 - [ ] **Location Sharing**: Safe location sharing dalam keluarga
 - [ ] **Dark Mode**: Theme switching dengan preference
-
+- [ ] ** Voice Message** Send Voice
+      
 ### **Q2 2025**
 - [ ] **Calendar Integration**: Family calendar dan event management
 - [ ] **Task Management**: Assign tasks ke anggota keluarga
 - [ ] **Emergency Features**: Emergency contact dan panic button
-- [ ] **Biometric Auth**: Fingerprint dan Face ID support
+- [ ] **Biometric Auth**: Fingerprint dan Face ID support 
 
 ### **Q3 2025**
 - [ ] **Multi-language**: Support Bahasa Indonesia dan English
