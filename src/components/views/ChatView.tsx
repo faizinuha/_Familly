@@ -1,3 +1,4 @@
+
 import ChatGroupList from '@/components/chat/ChatGroupList';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatMessages from '@/components/chat/ChatMessages';
@@ -79,8 +80,7 @@ export default function ChatView({
 
   const handleUploadFile = async (file: File) => {
     try {
-      const result = await uploadFile(file);
-      return result;
+      return await uploadFile(file);
     } catch (error) {
       console.error('Error uploading file:', error);
       toast({
@@ -231,19 +231,19 @@ export default function ChatView({
                     groups={availableGroups}
                     onSelectGroup={onSelectGroup}
                   />
-                  <div className="flex-1 overflow-hidden pb-20">
-                    <ChatMessages
-                      messages={messages}
-                      messagesLoading={messagesLoading}
-                      currentUserId={user?.id || ''}
+                  <ChatMessages
+                    messages={messages}
+                    messagesLoading={messagesLoading}
+                    currentUserId={user?.id || ''}
+                  />
+                  <div className="border-t bg-white shadow-lg sticky bottom-0 z-10">
+                    <ChatInput
+                      onSendMessage={handleSendMessage}
+                      onUploadFile={handleUploadFile}
+                      disabled={messagesLoading}
+                      members={members}
                     />
                   </div>
-                  <ChatInput
-                    onSendMessage={handleSendMessage}
-                    onUploadFile={handleUploadFile}
-                    disabled={messagesLoading}
-                    members={members}
-                  />
                 </div>
               );
             })()
