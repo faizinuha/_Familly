@@ -200,7 +200,31 @@ export function useGroupMessages(groupId: string | null) {
     }
   };
 
-  const uploadFile = async (file: File): Promise<string | null> => {
+  const sendSystemNotification = async (message: string) => {
+    if (!user || !groupId) return;
+
+    try {
+      const messageData = {
+        message: message.trim(),
+        sender_id: user.id,
+        group_id: groupId,
+        is_system_notification: true,
+        message_type: 'system',
+      };
+
+      const { error } = await supabase
+        .from('group_messages')
+        .insert(messageData);
+
+      if (error) throw error;
+
+    } catch (error) {
+      console.error('Error sending system notification:', error);
+      throw error;
+    }
+  };
+
+  const uploadFile = async (file: File): Promise<{url: string, name: string, type: string} | null> => {
     if (!user || !groupId) return null;
 
     try {
@@ -218,7 +242,11 @@ export function useGroupMessages(groupId: string | null) {
         .from('chat-files')
         .getPublicUrl(filePath);
 
-      return publicUrl;
+      return {
+        url: publicUrl,
+        name: file.name,
+        type: file.type
+      };
     } catch (error) {
       console.error('Error uploading file:', error);
       throw error;
@@ -229,6 +257,7 @@ export function useGroupMessages(groupId: string | null) {
     messages,
     loading,
     sendMessage,
+    sendSystemNotification,
     uploadFile,
   };
 }

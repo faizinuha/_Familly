@@ -1,4 +1,3 @@
-
 import ChatGroupList from '@/components/chat/ChatGroupList';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatMessages from '@/components/chat/ChatMessages';
@@ -80,7 +79,8 @@ export default function ChatView({
 
   const handleUploadFile = async (file: File) => {
     try {
-      return await uploadFile(file);
+      const result = await uploadFile(file);
+      return result;
     } catch (error) {
       console.error('Error uploading file:', error);
       toast({
