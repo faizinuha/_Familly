@@ -231,19 +231,19 @@ export default function ChatView({
                     groups={availableGroups}
                     onSelectGroup={onSelectGroup}
                   />
-                  <ChatMessages
-                    messages={messages}
-                    messagesLoading={messagesLoading}
-                    currentUserId={user?.id || ''}
-                  />
-                  <div className="border-t bg-white shadow-lg sticky bottom-0 z-10">
-                    <ChatInput
-                      onSendMessage={handleSendMessage}
-                      onUploadFile={handleUploadFile}
-                      disabled={messagesLoading}
-                      members={members}
+                  <div className="flex-1 overflow-hidden pb-20">
+                    <ChatMessages
+                      messages={messages}
+                      messagesLoading={messagesLoading}
+                      currentUserId={user?.id || ''}
                     />
                   </div>
+                  <ChatInput
+                    onSendMessage={handleSendMessage}
+                    onUploadFile={handleUploadFile}
+                    disabled={messagesLoading}
+                    members={members}
+                  />
                 </div>
               );
             })()
