@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
-import { Phone, MessageCircle, User, Search } from 'lucide-react';
+import { Phone, MessageCircle, User, Search, PhoneCall, Video, Mic } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import AddContactDialog from './AddContactDialog';
 import ContactChat from './ContactChat';
@@ -62,10 +62,149 @@ const ContactList: React.FC = () => {
   );
 
   const handleCall = (contact: Contact) => {
+    // This will be handled by the CallMeDialog
+  };
+
+  const handleVoiceCall = (contact: Contact) => {
     toast({
-      title: 'Memanggil',
-      description: `Memanggil ${contact.name}...`,
+      title: '📞 Voice Call',
+      description: `Memanggil ${contact.name} via suara...`,
     });
+    // Simulate call duration
+    setTimeout(() => {
+      toast({
+        title: 'Panggilan Berakhir',
+        description: `Panggilan dengan ${contact.name} telah berakhir`,
+      });
+    }, 3000);
+  };
+
+  const handleVideoCall = (contact: Contact) => {
+    toast({
+      title: '📹 Video Call',
+      description: `Memulai video call dengan ${contact.name}...`,
+    });
+    // Simulate call duration
+    setTimeout(() => {
+      toast({
+        title: 'Video Call Berakhir',
+        description: `Video call dengan ${contact.name} telah berakhir`,
+      });
+    }, 3000);
+  };
+
+  const handleWhatsAppCall = (contact: Contact) => {
+    const phoneNumber = contact.phone.replace(/[^\d]/g, ''); // Remove non-digits
+    const whatsappUrl = `https://wa.me/${phoneNumber}`;
+    window.open(whatsappUrl, '_blank');
+    toast({
+      title: '💬 WhatsApp',
+      description: `Membuka WhatsApp untuk ${contact.name}`,
+    });
+  };
+
+  // Call Me Dialog Component
+  const CallMeDialog = ({ contact }: { contact: Contact }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button
+            size="icon"
+            variant="outline"
+            className="h-10 w-10 bg-green-50 hover:bg-green-100 border-green-200 rounded-full"
+          >
+            <Phone className="h-4 w-4 text-green-600" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center">
+              <div className="flex items-center justify-center gap-3 mb-2">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-lg">
+                  {contact.avatar}
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">{contact.name}</h3>
+                  <p className="text-sm text-gray-500">{contact.phone}</p>
+                </div>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-3">
+            {/* Voice Call */}
+            <Button
+              onClick={() => {
+                handleVoiceCall(contact);
+                setIsOpen(false);
+              }}
+              className="w-full h-14 bg-green-500 hover:bg-green-600 text-white rounded-xl flex items-center gap-3"
+            >
+              <PhoneCall className="h-5 w-5" />
+              <div className="text-left">
+                <div className="font-semibold">Voice Call</div>
+                <div className="text-xs opacity-90">Panggilan suara langsung</div>
+              </div>
+            </Button>
+
+            {/* Video Call */}
+            <Button
+              onClick={() => {
+                handleVideoCall(contact);
+                setIsOpen(false);
+              }}
+              className="w-full h-14 bg-blue-500 hover:bg-blue-600 text-white rounded-xl flex items-center gap-3"
+            >
+              <Video className="h-5 w-5" />
+              <div className="text-left">
+                <div className="font-semibold">Video Call</div>
+                <div className="text-xs opacity-90">Panggilan video langsung</div>
+              </div>
+            </Button>
+
+            {/* WhatsApp Call */}
+            <Button
+              onClick={() => {
+                handleWhatsAppCall(contact);
+                setIsOpen(false);
+              }}
+              variant="outline"
+              className="w-full h-14 border-green-200 hover:bg-green-50 rounded-xl flex items-center gap-3"
+            >
+              <div className="w-5 h-5 bg-green-500 rounded flex items-center justify-center">
+                <Phone className="h-3 w-3 text-white" />
+              </div>
+              <div className="text-left">
+                <div className="font-semibold text-green-700">WhatsApp Call</div>
+                <div className="text-xs text-green-600">Panggilan via WhatsApp</div>
+              </div>
+            </Button>
+
+            {/* Regular Phone Call */}
+            <Button
+              onClick={() => {
+                window.open(`tel:${contact.phone}`, '_self');
+                setIsOpen(false);
+                toast({
+                  title: '📱 Phone Call',
+                  description: `Membuka dialer untuk ${contact.name}`,
+                });
+              }}
+              variant="outline"
+              className="w-full h-14 border-gray-200 hover:bg-gray-50 rounded-xl flex items-center gap-3"
+            >
+              <Mic className="h-5 w-5 text-gray-600" />
+              <div className="text-left">
+                <div className="font-semibold text-gray-700">Phone Dialer</div>
+                <div className="text-xs text-gray-600">Buka aplikasi telepon</div>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
   };
 
   const handleMessage = (contact: Contact) => {
@@ -157,14 +296,7 @@ const ContactList: React.FC = () => {
 
                   {/* Action Buttons */}
                   <div className="flex gap-1">
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={() => handleCall(contact)}
-                      className="h-10 w-10 bg-green-50 hover:bg-green-100 border-green-200 rounded-full"
-                    >
-                      <Phone className="h-4 w-4 text-green-600" />
-                    </Button>
+                    <CallMeDialog contact={contact} />
                     <Button
                       size="icon"
                       variant="outline"

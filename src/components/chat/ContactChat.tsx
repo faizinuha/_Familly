@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Phone, Video, MoreVertical } from "lucide-react";
+import { ArrowLeft, Phone, Video, MoreVertical, PhoneCall } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import ChatMessages from './ChatMessages';
 import ChatInput from '@/components/ChatInput';
 import { usePrivateMessages } from '@/hooks/usePrivateMessages';
@@ -82,6 +83,98 @@ const ContactChat: React.FC<ContactChatProps> = ({ contact, onBack }) => {
     }
   };
 
+  const handleVoiceCall = () => {
+    toast({
+      title: '📞 Voice Call',
+      description: `Memanggil ${contact.name} via suara...`,
+    });
+    setTimeout(() => {
+      toast({
+        title: 'Panggilan Berakhir',
+        description: `Panggilan dengan ${contact.name} telah berakhir`,
+      });
+    }, 3000);
+  };
+
+  const handleVideoCall = () => {
+    toast({
+      title: '📹 Video Call',
+      description: `Memulai video call dengan ${contact.name}...`,
+    });
+    setTimeout(() => {
+      toast({
+        title: 'Video Call Berakhir',
+        description: `Video call dengan ${contact.name} telah berakhir`,
+      });
+    }, 3000);
+  };
+
+  const handleWhatsAppCall = () => {
+    const phoneNumber = contact.phone.replace(/[^\d]/g, '');
+    const whatsappUrl = `https://wa.me/${phoneNumber}`;
+    window.open(whatsappUrl, '_blank');
+    toast({
+      title: '💬 WhatsApp',
+      description: `Membuka WhatsApp untuk ${contact.name}`,
+    });
+  };
+
+  // Call Options Dialog
+  const CallOptionsDialog = () => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="sm" className="text-white hover:bg-white/20 p-2 h-8 w-8">
+            <Phone className="h-4 w-4" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center">Pilih Jenis Panggilan</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-3">
+            <Button
+              onClick={() => {
+                handleVoiceCall();
+                setIsOpen(false);
+              }}
+              className="w-full h-12 bg-green-500 hover:bg-green-600 text-white rounded-xl flex items-center gap-3"
+            >
+              <PhoneCall className="h-4 w-4" />
+              Voice Call
+            </Button>
+
+            <Button
+              onClick={() => {
+                handleVideoCall();
+                setIsOpen(false);
+              }}
+              className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white rounded-xl flex items-center gap-3"
+            >
+              <Video className="h-4 w-4" />
+              Video Call
+            </Button>
+
+            <Button
+              onClick={() => {
+                handleWhatsAppCall();
+                setIsOpen(false);
+              }}
+              variant="outline"
+              className="w-full h-12 border-green-200 hover:bg-green-50 rounded-xl flex items-center gap-3"
+            >
+              <Phone className="h-4 w-4 text-green-600" />
+              WhatsApp Call
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   const getStatusColor = (status: Contact['status']) => {
     switch (status) {
       case 'online': return 'bg-green-500';
@@ -135,10 +228,13 @@ const ContactChat: React.FC<ContactChatProps> = ({ contact, onBack }) => {
         </div>
         
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" className="text-white hover:bg-white/20 p-2 h-8 w-8">
-            <Phone className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" className="text-white hover:bg-white/20 p-2 h-8 w-8">
+          <CallOptionsDialog />
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-white hover:bg-white/20 p-2 h-8 w-8"
+            onClick={handleVideoCall}
+          >
             <Video className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="sm" className="text-white hover:bg-white/20 p-2 h-8 w-8">
