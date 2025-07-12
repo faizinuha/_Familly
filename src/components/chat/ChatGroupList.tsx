@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import EmptyState from '@/components/ui/EmptyState';
-import { Users, Search } from 'lucide-react';
+import { Users, Search, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 
 // ChatGroupList.tsx
