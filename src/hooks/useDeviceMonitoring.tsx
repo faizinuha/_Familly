@@ -5,13 +5,13 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Device = Tables<'devices'> & {
-  profile?: {
+  profiles?: {
     full_name: string;
   };
 };
 
 type ActivityLog = Tables<'activity_logs'> & {
-  profile?: {
+  profiles?: {
     full_name: string;
   };
 };
@@ -83,7 +83,6 @@ export function useDeviceMonitoring() {
 
       if (error) throw error;
       
-      // Map the data to match our type structure
       const mappedDevices = (data || []).map(device => ({
         ...device,
         profile: device.profiles ? { full_name: device.profiles.full_name } : undefined
@@ -92,6 +91,7 @@ export function useDeviceMonitoring() {
       setDevices(mappedDevices);
     } catch (error) {
       console.error('Error fetching devices:', error);
+      setDevices([]);
     } finally {
       setLoading(false);
     }
@@ -110,7 +110,6 @@ export function useDeviceMonitoring() {
 
       if (error) throw error;
       
-      // Map the data to match our type structure
       const mappedActivities = (data || []).map(activity => ({
         ...activity,
         profile: activity.profiles ? { full_name: activity.profiles.full_name } : undefined
@@ -119,6 +118,7 @@ export function useDeviceMonitoring() {
       setActivities(mappedActivities);
     } catch (error) {
       console.error('Error fetching activities:', error);
+      setActivities([]);
     }
   };
 

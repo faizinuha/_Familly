@@ -1,11 +1,10 @@
-
-import { useState, useEffect } from 'react';
-import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from './useAuth';
 
 type GroupMessage = Tables<'group_messages'> & {
-  sender?: {
+  profiles?: {
     full_name: string;
   };
 };
@@ -13,9 +12,52 @@ type GroupMessage = Tables<'group_messages'> & {
 export function useGroupMessages(groupId: string | null) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<GroupMessage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const channelRef = useRef<any>(null);
 
+  // Fetch messages from DB
+  const fetchMessages = async () => {
+    if (!groupId || !user) {
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('group_messages')
+        .select('*, profiles(full_name)')
+        .eq('group_id', groupId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      const mapped = (data || []).map((msg) => ({
+        ...msg,
+        sender: msg.profiles
+          ? { full_name: msg.profiles.full_name }
+          : { full_name: 'Unknown' },
+      })) as GroupMessage[];
+      setMessages(mapped);
+    } catch (e) {
+      console.error('Error fetching messages:', e);
+      setMessages([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Subscribe to realtime changes
   useEffect(() => {
+    // Always cleanup previous channel first
+    if (channelRef.current) {
+      console.log('Cleaning up previous group messages channel');
+      try {
+        supabase.removeChannel(channelRef.current);
+      } catch (error) {
+        console.error('Error removing channel:', error);
+      }
+      channelRef.current = null;
+    }
+
     if (!groupId || !user) {
       setMessages([]);
       setLoading(false);
@@ -23,96 +65,162 @@ export function useGroupMessages(groupId: string | null) {
     }
 
     fetchMessages();
+
+    // Create unique channel name to avoid duplicate subscriptions
+    const channelName = `group-messages-${groupId}-${user.id}-${Date.now()}`;
+    console.log('Creating new group messages channel:', channelName);
     
-    // Set up real-time subscription
-    const channel = supabase
-      .channel(`group-messages-${groupId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'group_messages',
-          filter: `group_id=eq.${groupId}`
-        },
-        (payload) => {
-          console.log('New message:', payload);
-          fetchMessages(); // Refresh messages when new one arrives
-        }
-      )
-      .subscribe();
+    try {
+      const channel = supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'group_messages',
+            filter: `group_id=eq.${groupId}`,
+          },
+          (payload) => {
+            console.log('New group message received:', payload);
+            fetchMessages(); // Refetch to get complete data with profiles
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'group_messages',
+            filter: `group_id=eq.${groupId}`,
+          },
+          (payload) => {
+            console.log('Group message deleted:', payload);
+            fetchMessages();
+          }
+        );
+
+      // Only subscribe if channel is not already subscribed
+      if (channel.state !== 'joined' && channel.state !== 'joining') {
+        channel.subscribe((status) => {
+          console.log('Group messages channel subscription status:', status);
+        });
+      }
+
+      channelRef.current = channel;
+    } catch (error) {
+      console.error('Error setting up group messages channel:', error);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        console.log('Cleanup group messages channel on unmount');
+        try {
+          supabase.removeChannel(channelRef.current);
+        } catch (error) {
+          console.error('Error cleaning up channel:', error);
+        }
+        channelRef.current = null;
+      }
     };
-  }, [groupId, user]);
+  }, [groupId, user?.id]);
 
-  const fetchMessages = async () => {
-    if (!groupId) return;
-
+  const sendMessage = async (
+    message: string,
+    mentions: string[] = [],
+    fileUrl?: string,
+    fileType?: string,
+    fileName?: string
+  ) => {
+    if (!user || !groupId || (!message.trim() && !fileUrl)) return;
+    
     try {
-      const { data, error } = await supabase
-        .from('group_messages')
-        .select(`
-          *,
-          profiles(full_name)
-        `)
-        .eq('group_id', groupId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      
-      // Map the data to match our type structure
-      const mappedMessages = (data || []).map(message => ({
-        ...message,
-        sender: message.profiles ? { full_name: message.profiles.full_name } : undefined
-      })) as GroupMessage[];
-      
-      setMessages(mappedMessages);
+      console.log('Sending group message:', { message, fileUrl, fileType, fileName });
+      const { error } = await supabase.from('group_messages').insert({
+        group_id: groupId,
+        sender_id: user.id,
+        message: message.trim() || '',
+        mentions,
+        file_url: fileUrl,
+        file_type: fileType,
+        file_name: fileName,
+      });
+      if (error) {
+        console.error('Error sending message:', error);
+        throw error;
+      }
     } catch (error) {
-      console.error('Error fetching messages:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error in sendMessage:', error);
+      throw error;
     }
   };
 
-  const sendMessage = async (message: string, mentions: string[] = []) => {
-    if (!user || !groupId || !message.trim()) return;
-
+  const deleteMessage = async (messageId: string) => {
+    if (!user || !groupId) return;
+    
     try {
       const { error } = await supabase
         .from('group_messages')
-        .insert({
-          group_id: groupId,
-          sender_id: user.id,
-          message: message.trim(),
-          mentions
-        });
-
-      if (error) throw error;
+        .delete()
+        .eq('id', messageId)
+        .eq('sender_id', user.id); // Only allow deleting own messages
+      
+      if (error) {
+        console.error('Error deleting message:', error);
+        throw error;
+      }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error in deleteMessage:', error);
       throw error;
     }
   };
 
   const sendSystemNotification = async (message: string) => {
     if (!user || !groupId) return;
-
     try {
-      const { error } = await supabase
-        .from('group_messages')
-        .insert({
-          group_id: groupId,
-          sender_id: user.id,
-          message,
-          is_system_notification: true,
-          message_type: 'notification'
-        });
-
+      const { error } = await supabase.from('group_messages').insert({
+        group_id: groupId,
+        sender_id: user.id,
+        message,
+        is_system_notification: true,
+        message_type: 'notification',
+      });
       if (error) throw error;
+    } catch (e) {
+      console.error('Error sending system notification:', e);
+    }
+  };
+
+  const uploadFile = async (file: File) => {
+    if (!user || !groupId) return null;
+    
+    try {
+      console.log('Uploading file to group chat:', file.name, file.type, file.size);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('chat-files')
+        .upload(fileName, file);
+      
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+      
+      const { data } = supabase.storage
+        .from('chat-files')
+        .getPublicUrl(fileName);
+      
+      console.log('File uploaded successfully to group chat:', data.publicUrl);
+      
+      return {
+        url: data.publicUrl,
+        name: file.name,
+        type: file.type,
+      };
     } catch (error) {
-      console.error('Error sending system notification:', error);
+      console.error('Error uploading file to group chat:', error);
       throw error;
     }
   };
@@ -121,7 +229,9 @@ export function useGroupMessages(groupId: string | null) {
     messages,
     loading,
     sendMessage,
+    deleteMessage,
     sendSystemNotification,
-    refreshMessages: fetchMessages
+    uploadFile,
+    refreshMessages: fetchMessages,
   };
 }

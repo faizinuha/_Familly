@@ -45,6 +45,13 @@ export type Database = {
             referencedRelation: "devices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_activity_logs_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       devices: {
@@ -84,7 +91,15 @@ export type Database = {
           user_id?: string
           wifi_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_devices_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       family_groups: {
         Row: {
@@ -113,6 +128,44 @@ export type Database = {
         }
         Relationships: []
       }
+      group_invitations: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          group_id: string
+          id: string
+          invited_name: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          group_id: string
+          id?: string
+          invited_name: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          group_id?: string
+          id?: string
+          invited_name?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_invitations_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "family_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_members: {
         Row: {
           group_id: string
@@ -140,11 +193,21 @@ export type Database = {
             referencedRelation: "family_groups"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "group_members_user_id_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       group_messages: {
         Row: {
           created_at: string | null
+          file_name: string | null
+          file_type: string | null
+          file_url: string | null
           group_id: string
           id: string
           is_system_notification: boolean | null
@@ -155,6 +218,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           group_id: string
           id?: string
           is_system_notification?: boolean | null
@@ -165,6 +231,9 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
           group_id?: string
           id?: string
           is_system_notification?: boolean | null
@@ -174,6 +243,13 @@ export type Database = {
           sender_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_group_messages_profiles"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "group_messages_group_id_fkey"
             columns: ["group_id"]
@@ -277,15 +353,57 @@ export type Database = {
         }
         Relationships: []
       }
+      user_status: {
+        Row: {
+          created_at: string | null
+          current_activity: string | null
+          id: string
+          is_online: boolean | null
+          last_seen: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_activity?: string | null
+          id?: string
+          is_online?: boolean | null
+          last_seen?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_activity?: string | null
+          id?: string
+          is_online?: boolean | null
+          last_seen?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_user_profile"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_status_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      generate_invite_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
       device_status: "online" | "offline"
