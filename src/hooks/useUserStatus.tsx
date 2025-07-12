@@ -93,16 +93,25 @@ export function useUserStatus() {
     if (!user) return;
 
     try {
-      const { error } = await supabase.from('user_status').upsert({
-        user_id: user.id,
-        is_online: isOnline,
-        last_seen: new Date().toISOString(),
-        current_activity: currentActivity || null,
-        updated_at: new Date().toISOString(),
-      });
+      const { error } = await supabase
+        .from('user_status')
+        .upsert({
+          user_id: user.id,
+          is_online: isOnline,
+          last_seen: new Date().toISOString(),
+          current_activity: currentActivity || null,
+          updated_at: new Date().toISOString(),
+        })
+        .select();
 
       if (error) console.error('Error updating status:', error);
     } catch (err) {
+      // Handle network errors gracefully
+      if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+        console.warn('Network error updating status - will retry later:', err.message);
+        // Optionally implement retry logic here
+        return;
+      }
       console.error('Unexpected error updating status:', err);
     }
   };
