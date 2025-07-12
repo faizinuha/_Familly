@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useGroupMembers } from '@/hooks/useGroupMembers';
 import { useGroupMessages } from '@/hooks/useGroupMessages';
-import { Phone, User, Users } from 'lucide-react';
+import { Phone, User, Users, MessageCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import ContactList from '@/components/chat/ContactList';
 
@@ -140,21 +140,23 @@ export default function ChatView({
   ];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white">
       {/* Tab Navbar */}
-      <div className="flex border-b bg-white">
+      <div className="flex border-b bg-white shadow-sm">
         {tabList.map((tab) => (
           <button
             key={tab.key}
             onClick={() => handleTabChange(tab.key as 'group' | 'contact' | 'call')}
-            className={`flex-1 flex flex-col items-center py-2 px-1 text-sm font-medium transition-all border-b-2 ${
+            className={`flex-1 flex flex-col items-center py-3 px-2 text-sm font-medium transition-all duration-200 border-b-2 ${
               activeTab === tab.key
-                ? 'border-blue-500 text-blue-600 bg-blue-50'
-                : 'border-transparent text-gray-500 hover:bg-gray-50'
+                ? 'border-blue-500 text-blue-600 bg-blue-50/80'
+                : 'border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-700'
             }`}
           >
-            <tab.icon className="h-5 w-5 mb-1" />
-            {tab.label}
+            <tab.icon className={`h-5 w-5 mb-1 transition-colors ${
+              activeTab === tab.key ? 'text-blue-600' : 'text-gray-500'
+            }`} />
+            <span className="text-xs font-medium">{tab.label}</span>
           </button>
         ))}
       </div>

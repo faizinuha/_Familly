@@ -25,24 +25,24 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   onSelectGroup
 }) => {
   return (
-    <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 flex items-center justify-between shadow-lg">
+    <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 flex items-center justify-between shadow-lg">
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
           size="sm"
           onClick={onBackClick}
-          className="text-white hover:bg-white/20 p-2"
+          className="text-white hover:bg-white/20 p-2 rounded-full"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm shadow-sm">
             <Users className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h2 className="font-semibold text-lg">{selectedGroup.name}</h2>
-            <div className="flex items-center gap-2 text-sm opacity-90">
+            <h2 className="font-bold text-lg">{selectedGroup.name}</h2>
+            <div className="flex items-center gap-2 text-sm opacity-90 mt-0.5">
               <Users className="h-3 w-3" />
               <span>
                 {membersLoading ? 'Loading...' : `${memberCount} anggota`}
@@ -55,7 +55,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
       <Button
         variant="ghost"
         size="sm"
-        className="text-white hover:bg-white/20 p-2"
+        className="text-white hover:bg-white/20 p-2 rounded-full"
       >
         <Settings className="h-5 w-5" />
       </Button>

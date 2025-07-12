@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import EmptyState from '@/components/ui/EmptyState';
-import { Users, Search } from 'lucide-react';
+import { Users, Search, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 
 // ChatGroupList.tsx
@@ -36,63 +36,52 @@ export default function ChatGroupList({
   return (
     <div className="flex flex-col h-full">
       {/* Search Header */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4">
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 shadow-lg">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/70" />
           <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Cari grup..."
-            className="pl-10 bg-white/20 border-white/30 text-white placeholder-white/70 focus:bg-white/30"
+            className="pl-10 bg-white/20 border-white/30 text-white placeholder-white/70 focus:bg-white/30 rounded-xl h-12"
           />
         </div>
       </div>
 
       {/* Group List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
         {filteredGroups.map((group) => (
           <Card
             key={group.id}
-            className={`cursor-pointer hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 hover:shadow-md hover:scale-[1.02] border hover:border-blue-200 ${
-              lastOpenedGroupId === group.id ? 'ring-2 ring-blue-400' : ''
+            className={`cursor-pointer hover:shadow-lg transition-all duration-300 hover:scale-[1.02] border-0 shadow-sm bg-white ${
+              lastOpenedGroupId === group.id ? 'ring-2 ring-blue-400 shadow-lg' : 'hover:shadow-md'
             }`}
             onClick={() => onSelectGroup(group.id)}
           >
-            <CardHeader className="p-3">
+            <CardHeader className="p-4">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center shadow-lg">
                     <span className="text-white font-bold text-sm">
                       {group.name?.[0]?.toUpperCase() || 'G'}
                     </span>
                   </div>
                   <div>
-                    <div className="font-medium text-base">
+                    <div className="font-semibold text-base text-gray-900">
                       {group.name || 'Unnamed Group'}
                     </div>
-                    <div className="text-xs text-gray-500 flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      <span>Tap untuk chat</span>
+                    <div className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                      <MessageCircle className="h-3 w-3" />
+                      <span>Ketuk untuk chat</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex flex-col items-center gap-1">
-                  <Badge variant="secondary" className="text-xs px-2 py-1">
+                  <Badge variant="secondary" className="text-xs px-2 py-1 bg-blue-100 text-blue-700">
                     {group.memberCount
                       ? `${group.memberCount} anggota`
                       : 'Chat'}
                   </Badge>
-                  {/* Tombol titik tiga untuk pin */}
-                  <button
-                    className="text-gray-400 hover:text-blue-600 text-lg px-1"
-                    title="Pin Grup"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePinGroup(group.id);
-                    }}
-                  >
-                    &#8942;
-                  </button>
                 </div>
               </CardTitle>
             </CardHeader>
@@ -100,11 +89,13 @@ export default function ChatGroupList({
         ))}
         
         {filteredGroups.length === 0 && (
-          <EmptyState
-            icon={Users}
-            title={searchTerm ? "Grup tidak ditemukan" : "Belum ada grup untuk chat"}
-            description={searchTerm ? `Tidak ada grup yang cocok dengan "${searchTerm}"` : "Buat atau join grup terlebih dahulu"}
-          />
+          <div className="flex-1 flex items-center justify-center p-8">
+            <EmptyState
+              icon={Users}
+              title={searchTerm ? "Grup tidak ditemukan" : "Belum ada grup untuk chat"}
+              description={searchTerm ? `Tidak ada grup yang cocok dengan "${searchTerm}"` : "Buat atau join grup terlebih dahulu"}
+            />
+          </div>
         )}
       </div>
     </div>
