@@ -102,8 +102,8 @@ const ContactList: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4">
-        <h2 className="text-xl font-bold mb-3">Kontak Keluarga</h2>
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 shadow-lg">
+        <h2 className="text-xl font-bold mb-3 text-center">Kontak Keluarga</h2>
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -111,7 +111,7 @@ const ContactList: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Cari kontak..."
-              className="pl-10 bg-white/20 border-white/30 text-white placeholder-white/70"
+              className="pl-10 bg-white/20 border-white/30 text-white placeholder-white/70 rounded-xl h-12"
             />
           </div>
           <AddContactDialog onContactAdded={handleAddContact} />
@@ -119,35 +119,35 @@ const ContactList: React.FC = () => {
       </div>
 
       {/* Contact List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
         {filteredContacts.length > 0 ? (
           filteredContacts.map((contact) => (
-            <Card key={contact.id} className="shadow-sm hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-400">
-              <CardContent className="p-3">
+            <Card key={contact.id} className="shadow-sm hover:shadow-lg transition-all duration-200 border-0 bg-white">
+              <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   {/* Avatar */}
                   <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-lg shadow-md">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-lg shadow-lg">
                       {contact.avatar}
                     </div>
                     {/* Status indicator */}
-                    <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${getStatusColor(contact.status)}`}></div>
+                    <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${getStatusColor(contact.status)}`}></div>
                   </div>
 
                   {/* Contact Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-gray-800 text-sm truncate">{contact.name}</h3>
+                      <h3 className="font-semibold text-gray-900 text-base truncate">{contact.name}</h3>
                       {contact.isFamily && (
-                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 px-2 py-0">
+                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5">
                           Keluarga
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-gray-600 mb-1 truncate">{contact.phone}</p>
-                    <div className="flex items-center gap-2">
+                    <p className="text-sm text-gray-600 mb-1 truncate">{contact.phone}</p>
+                    <div className="flex items-center gap-2 mt-1">
                       <span className={`inline-block w-2 h-2 rounded-full ${getStatusColor(contact.status)}`}></span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-sm text-gray-500">
                         {contact.status === 'online' ? 'Online' : 
                          contact.status === 'busy' ? 'Sibuk' : 
                          contact.lastSeen ? `Terakhir dilihat ${contact.lastSeen}` : 'Offline'}
@@ -158,20 +158,20 @@ const ContactList: React.FC = () => {
                   {/* Action Buttons */}
                   <div className="flex gap-1">
                     <Button
-                      size="sm"
+                      size="icon"
                       variant="outline"
                       onClick={() => handleCall(contact)}
-                      className="h-8 w-8 p-0 bg-green-50 hover:bg-green-100 border-green-200"
+                      className="h-10 w-10 bg-green-50 hover:bg-green-100 border-green-200 rounded-full"
                     >
-                      <Phone className="h-3 w-3 text-green-600" />
+                      <Phone className="h-4 w-4 text-green-600" />
                     </Button>
                     <Button
-                      size="sm"
+                      size="icon"
                       variant="outline"
                       onClick={() => handleMessage(contact)}
-                      className="h-8 w-8 p-0 bg-blue-50 hover:bg-blue-100 border-blue-200"
+                      className="h-10 w-10 bg-blue-50 hover:bg-blue-100 border-blue-200 rounded-full"
                     >
-                      <MessageCircle className="h-3 w-3 text-blue-600" />
+                      <MessageCircle className="h-4 w-4 text-blue-600" />
                     </Button>
                   </div>
                 </div>
@@ -179,14 +179,14 @@ const ContactList: React.FC = () => {
             </Card>
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-16">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <User className="h-8 w-8 text-gray-400" />
             </div>
-            <h3 className="font-semibold text-gray-700 mb-2">
+            <h3 className="font-semibold text-gray-800 mb-2 text-lg">
               {searchTerm ? 'Kontak tidak ditemukan' : 'Belum ada kontak'}
             </h3>
-            <p className="text-gray-500 text-center text-sm">
+            <p className="text-gray-600 text-center text-sm max-w-xs">
               {searchTerm 
                 ? `Tidak ada kontak yang cocok dengan "${searchTerm}"`
                 : 'Tambahkan kontak untuk mulai berkomunikasi'
@@ -197,12 +197,12 @@ const ContactList: React.FC = () => {
       </div>
 
       {/* Footer dengan statistik */}
-      <div className="border-t bg-gray-50 p-3">
-        <div className="flex justify-between items-center text-sm text-gray-600">
+      <div className="border-t bg-white p-4 shadow-sm">
+        <div className="flex justify-between items-center text-sm text-gray-700">
           <span>{filteredContacts.length} kontak</span>
           <div className="flex gap-4">
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
               {contacts.filter(c => c.status === 'online').length} online
             </span>
             <span className="flex items-center gap-1">
