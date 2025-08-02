@@ -22,6 +22,7 @@ const Index = () => {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [newGroupName, setNewGroupName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
+  const [isPrivateGroup, setIsPrivateGroup] = useState(false);
   const [joinedGroupIds, setJoinedGroupIds] = useState<string[]>([]);
   const {
     user,
@@ -100,20 +101,20 @@ const Index = () => {
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return;
     try {
-      const group = await createGroup(newGroupName);
+      const group = await createGroup(newGroupName, isPrivateGroup);
       if (group) {
         toast({
           title: 'Berhasil!',
-          description: `Grup "${newGroupName}" berhasil dibuat`
+          description: `Grup "${newGroupName}" ${isPrivateGroup ? 'private' : 'public'} berhasil dibuat`
         });
         setNewGroupName('');
-        // Perbaikan: Hanya set selected group jika user memang ingin langsung masuk
-        // setSelectedGroupId(group.id);
+        setIsPrivateGroup(false);
+        refreshGroups();
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Gagal membuat grup',
+        description: error.message || 'Gagal membuat grup',
         variant: 'destructive'
       });
     }
@@ -216,7 +217,7 @@ const Index = () => {
       case 'home':
         return <HomeView profile={profile} user={user} isHeadOfFamily={isHeadOfFamily} groups={groups} />;
       case 'groups':
-        return <GroupsView groups={groups} user={user} groupMembers={groupMembers || []} newGroupName={newGroupName} setNewGroupName={setNewGroupName} inviteCode={inviteCode} setInviteCode={setInviteCode} onCreateGroup={handleCreateGroup} onJoinGroup={handleJoinGroup} onDeleteGroup={handleDeleteGroup} onSelectGroup={setSelectedGroupId} onLeaveGroup={handleLeaveGroup} />;
+        return <GroupsView groups={groups} user={user} groupMembers={groupMembers || []} newGroupName={newGroupName} setNewGroupName={setNewGroupName} inviteCode={inviteCode} setInviteCode={setInviteCode} isPrivateGroup={isPrivateGroup} setIsPrivateGroup={setIsPrivateGroup} onCreateGroup={handleCreateGroup} onJoinGroup={handleJoinGroup} onDeleteGroup={handleDeleteGroup} onSelectGroup={setSelectedGroupId} onLeaveGroup={handleLeaveGroup} />;
       case 'monitoring':
         return <MonitoringView devices={devices} isHeadOfFamily={isHeadOfFamily} onSendNotification={handleSendNotification} groups={groups} selectedGroupId={selectedGroupId} />;
       case 'chat':

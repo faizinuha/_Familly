@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
 
@@ -18,6 +19,8 @@ interface GroupsViewProps {
   setNewGroupName: (name: string) => void;
   inviteCode: string;
   setInviteCode: (code: string) => void;
+  isPrivateGroup: boolean;
+  setIsPrivateGroup: (isPrivate: boolean) => void;
   onCreateGroup: () => void;
   onJoinGroup: () => void;
   onDeleteGroup: (groupId: string) => void;
@@ -33,6 +36,8 @@ const GroupsView: React.FC<GroupsViewProps> = ({
   setNewGroupName,
   inviteCode,
   setInviteCode,
+  isPrivateGroup,
+  setIsPrivateGroup,
   onCreateGroup,
   onJoinGroup,
   onDeleteGroup,
@@ -106,6 +111,22 @@ const GroupsView: React.FC<GroupsViewProps> = ({
                     className="mt-2"
                   />
                 </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="isPrivate" className="text-sm font-medium">
+                    Grup Private
+                  </Label>
+                  <Switch
+                    id="isPrivate"
+                    checked={isPrivateGroup}
+                    onCheckedChange={setIsPrivateGroup}
+                  />
+                </div>
+                <p className="text-xs text-gray-500">
+                  {isPrivateGroup 
+                    ? "Grup private hanya bisa dilihat oleh anggota yang sudah bergabung" 
+                    : "Grup public dapat ditemukan oleh pengguna lain"
+                  }
+                </p>
                 <Button onClick={onCreateGroup} className="w-full">
                   Buat Grup
                 </Button>
@@ -159,16 +180,21 @@ const GroupsView: React.FC<GroupsViewProps> = ({
                         {group.name[0]?.toUpperCase()}
                       </span>
                     </div>
-                    <div>
-                      <h3 className="font-bold text-lg text-gray-800">{group.name}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        {isHeadOfFamily && (
-                          <Badge className="bg-gradient-to-r from-yellow-400 to-orange-400 text-yellow-900 text-xs">
-                            ✨ Kepala Keluarga
-                          </Badge>
-                        )}
+                      <div>
+                        <h3 className="font-bold text-lg text-gray-800">{group.name}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          {isHeadOfFamily && (
+                            <Badge className="bg-gradient-to-r from-yellow-400 to-orange-400 text-yellow-900 text-xs">
+                              ✨ Kepala Keluarga
+                            </Badge>
+                          )}
+                          {group.is_private && (
+                            <Badge variant="secondary" className="text-xs">
+                              🔒 Private
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                    </div>
                   </div>
                   
                   {isHeadOfFamily && (

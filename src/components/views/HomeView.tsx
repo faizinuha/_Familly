@@ -21,18 +21,17 @@ const HomeView: React.FC<HomeViewProps> = ({
 }) => {
   const { getOnlineDevices, activities, getCurrentUserDevices } = useEnhancedDeviceMonitoring();
   
-  // Get the first group's members to avoid conditional hook calls
-  const firstGroupId = groups.length > 0 ? groups[0].id : null;
-  const { members: firstGroupMembers } = useGroupMembers(firstGroupId);
+  // Get all group members from all groups
+  const allGroupIds = groups.map(group => group.id);
+  const { members: allGroupMembers } = useGroupMembers(allGroupIds[0]); // Using first group for now
   
-  // For now, we'll use the first group's members as a sample
-  // In a real implementation, you might want to get all group members differently
-  const groupMemberIds = firstGroupMembers?.map(member => member.user_id) || [];
+  // Get real data instead of dummy data
+  const groupMemberIds = allGroupMembers?.map(member => member.user_id) || [user?.id].filter(Boolean);
   
-  // Filter activities to only show from group members
-  const filteredActivities = activities.filter(activity => 
-    groupMemberIds.includes(activity.user_id)
-  );
+  // Filter activities to show real user activities
+  const recentActivities = activities
+    .filter(activity => groupMemberIds.includes(activity.user_id))
+    .slice(0, 5); // Show only 5 most recent
 
   const onlineDevices = getOnlineDevices();
   const currentUserDevices = getCurrentUserDevices();
@@ -94,8 +93,8 @@ const HomeView: React.FC<HomeViewProps> = ({
             <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mx-auto mb-2">
               <Activity className="h-5 w-5 text-white" />
             </div>
-            <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">{filteredActivities.length}</div>
-            <div className="text-sm text-orange-600 dark:text-orange-400">Aktivitas Grup</div>
+            <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">{recentActivities.length}</div>
+            <div className="text-sm text-orange-600 dark:text-orange-400">Aktivitas Terbaru</div>
           </CardContent>
         </Card>
       </div>
@@ -111,14 +110,14 @@ const HomeView: React.FC<HomeViewProps> = ({
               <span className="text-lg dark:text-white">Aktivitas Anggota Grup</span>
             </div>
             <Badge variant="secondary" className="text-xs">
-              {filteredActivities.length} aktivitas
+              {recentActivities.length} aktivitas
             </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4">
           <div className="space-y-3">
-            {filteredActivities.length > 0 ? (
-              filteredActivities.slice(0, 5).map((activity: any, index: number) => (
+            {recentActivities.length > 0 ? (
+              recentActivities.map((activity: any, index: number) => (
                 <div key={activity.id || index} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold text-xs">
                     {activity.profiles?.full_name?.[0]?.toUpperCase() || '?'}
@@ -149,8 +148,8 @@ const HomeView: React.FC<HomeViewProps> = ({
                 <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
                   <Activity className="h-6 w-6 text-gray-400" />
                 </div>
-                <p className="text-gray-500 dark:text-gray-400 font-medium">Belum ada aktivitas anggota grup</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Aktivitas akan muncul ketika anggota grup menggunakan aplikasi</p>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">Belum ada aktivitas terbaru</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Aktivitas akan muncul saat ada interaksi dengan aplikasi</p>
               </div>
             )}
           </div>

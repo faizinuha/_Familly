@@ -46,7 +46,7 @@ export function useFamilyGroups() {
     }
   };
 
-  const createGroup = async (name: string) => {
+  const createGroup = async (name: string, isPrivate: boolean = false) => {
     if (!user) return null;
 
     try {
@@ -56,6 +56,7 @@ export function useFamilyGroups() {
         .insert({
           name,
           head_of_family_id: user.id,
+          is_private: isPrivate,
           invite_code: '', // Will be replaced by trigger
         })
         .select()
